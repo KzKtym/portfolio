@@ -1,0 +1,175 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ダウンロード管理</title>
+    <link rel="stylesheet" href="{% static 'download/main.css' %}">
+</head>
+<body>
+    <div class="manage-container">
+        <div class="manage-header">
+            <h1>ダウンロード管理</h1>
+            <div class="manage-header-buttons">
+                <a class="btn btn-home" href="{% url 'home:home' %}">Home</a>
+                <a class="btn {% if mode == 'default' %}btn-active{% endif %}" href="{% url 'download:manage' %}">標準表示</a>
+                <a class="btn {% if mode == 'all' %}btn-active{% endif %}" href="{% url 'download:manage' %}?mode=all">全表示</a>
+                <a class="btn {% if mode == 'all_deleted' %}btn-active{% endif %}" href="{% url 'download:manage' %}?mode=all_deleted">削除含む</a>
+            </div>
+        </div>
+
+        <section class="issue-list-section">
+            <div class="section-header">
+                <h2>発行リスト（Upload期限：{{ config.upload_limit_minutes }}分 Download期限：{{ config.download_expire_days }}日）</h2>
+                <form method="post" action="{% url 'download:manage_issue_token' %}">
+                    {% csrf_token %}
+                    <button class="btn" type="submit">トークン新規発行</button>
+                </form>
+            </div>
+
+            <table class="issue-list-table">
+                <thead>
+                    <tr>
+                        <th>発行日時</th>
+                        <th>トークン</th>
+                        <th>期限</th>
+                        <th>宛先ID</th>
+                        <th>タイトル</th>
+                        <th>タイプ</th>
+                        <th>Upload日時</th>
+                        <th>Download日時</th>
+                        <th>Downloadユーザー</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tokens %}
+                    <tr class="
+                        {% if t.downloaded_at %}row-downloaded
+                        {% elif t.uploaded_file and t.is_download_expired %}row-expired
+                        {% elif not t.uploaded_file and t.is_upload_expired %}row-expired
+                        {% endif %}
+                        {% if t.is_deleted %}row-deleted{% endif %}
+                    ">
+                        <td>{{ t.issued_at|date:"Y/m/d H:i" }}</td>
+                        <td>{{ t.token }}</td>
+                        <td>{{ t.download_expire_date|date:"Y/m/d" }}</td>
+                        <td>{{ t.target_user|default:"" }}</td>
+                        <td>{{ t.title|default:"" }}</td>
+                        <td>{{ t.upload_type|default:"" }}</td>
+                        <td>{{ t.uploaded_at|date:"Y/m/d H:i"|default:"" }}</td>
+                        <td>{{ t.downloaded_at|date:"Y/m/d H:i"|default:"" }}</td>
+                        <td>{{ t.download_user|default:"" }}</td>
+                        <td>
+                            {% if t.uploaded_file %}
+                            <a href="{% url 'download:draft' token=t.token %}">下書き</a>
+                            {% endif %}
+                            {% if not t.is_deleted %}
+                            <form method="post" action="{% url 'download:manage_delete_token' token=t.token %}" class="inline-form">
+                                {% csrf_token %}
+                                <button class="link-button" type="submit">削除</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="user-management-section" id="user-management-section">
+            <div class="section-header">
+                <h2>ダウンロード許可ユーザー管理</h2>
+                <button class="btn" id="add-user-button" type="button">追加</button>
+            </div>
+
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>宛先 ID</th>
+                        <th>ユーザー名</th>
+                        <th>備考欄</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr class="user-row" data-user-id="{{ u.id }}">
+                        <td class="view-mode">{{ u.user_id }}</td>
+                        <td class="view-mode">{{ u.user_name|default:"" }}</td>
+                        <td class="view-mode">{{ u.comment|default:"" }}</td>
+                        <td class="view-mode">
+                            <button class="link-button edit-button" type="button">編集</button>
+                            <form method="post" action="{% url 'download:manage_user_delete' user_id=u.id %}" class="inline-form">
+                                {% csrf_token %}
+                                <button class="link-button" type="submit">削除</button>
+                            </form>
+                        </td>
+                        <td class="edit-mode" hidden colspan="4">
+                            <form method="post" action="{% url 'download:manage_user_edit' user_id=u.id %}" class="user-edit-form">
+                                {% csrf_token %}
+                                <div class="user-form-row">
+                                    <label>宛先 ID：</label>
+                                    <input type="text" name="user_id" value="{{ u.user_id }}" required>
+                                    <span class="user-form-note">※任意の半角英数（アップロード時に指定）</span>
+                                </div>
+                                <div class="user-form-row">
+                                    <label>名称：</label>
+                                    <input type="text" name="user_name" value="{{ u.user_name|default:'' }}">
+                                    <span class="user-form-note">※メール本文表示用</span>
+                                </div>
+                                <div class="user-form-row">
+                                    <label>パスワード：</label>
+                                    <input type="password" name="password" placeholder="変更する場合のみ入力">
+                                </div>
+                                <div class="user-form-row">
+                                    <label>備考：</label>
+                                    <input type="text" name="comment" value="{{ u.comment|default:'' }}">
+                                </div>
+                                <div class="user-form-row">
+                                    <button class="btn" type="submit">保存</button>
+                                    <button class="btn cancel-button" type="button">Can</button>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="user-row new-user-row" id="new-user-row" hidden>
+                        <td colspan="4">
+                            <form method="post" action="{% url 'download:manage_user_add' %}" class="user-edit-form">
+                                {% csrf_token %}
+                                <p class="user-form-title">ユーザー追加：</p>
+                                <div class="user-form-row">
+                                    <label>ID：</label>
+                                    <input type="text" name="user_id" required>
+                                    <span class="user-form-note">※任意の半角英数（アップロード時に指定）</span>
+                                </div>
+                                <div class="user-form-row">
+                                    <label>名称：</label>
+                                    <input type="text" name="user_name">
+                                    <span class="user-form-note">※メール本文表示用</span>
+                                </div>
+                                <div class="user-form-row">
+                                    <label>パスワード：</label>
+                                    <input type="password" name="password" required>
+                                </div>
+                                <div class="user-form-row">
+                                    <label>備考：</label>
+                                    <input type="text" name="comment">
+                                </div>
+                                <div class="user-form-row">
+                                    <button class="btn" type="submit">保存</button>
+                                    <button class="btn cancel-button" type="button">Cancel</button>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+    <script src="{% static 'download/main.js' %}"></script>
+</body>
+</html>

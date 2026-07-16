@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ダウンロード案内 下書き</title>
+    <link rel="stylesheet" href="{% static 'download/main.css' %}">
+</head>
+<body>
+    <div class="draft-container">
+        <h1>ダウンロード案内 下書き</h1>
+
+        <p>
+            <strong>トークン：</strong>{{ token_obj.token }}<br>
+            <strong>タイトル：</strong>{{ token_obj.title|default:"" }}<br>
+            <strong>指定ユーザー：</strong>{{ token_obj.target_user|default:"" }}<br>
+            <strong>アップロードタイプ：</strong>{{ token_obj.upload_type|default:"" }}
+        </p>
+        <label><strong>メール本文：</strong></label>
+        {% if template_error %}
+        <p class="error-message">{{ template_error }}</p>
+        {% else %}
+        <textarea id="draft-text" readonly rows="12">{{ draft_text }}</textarea>
+
+        <div class="draft-test-section">
+            <span class="draft-test-label">内部テスト：</span><a href="{{ test_download_url }}" class="draft-test-link">{{ download_url }}</a>
+        </div>
+
+        <button id="copy-button" type="button">本文Copy</button>
+        <span id="copy-message"></span>
+        {% endif %}
+
+        <p><a href="{% url 'download:manage' %}">管理画面へ戻る</a></p>
+    </div>
+    <script src="{% static 'download/main.js' %}"></script>
+</body>
+</html>

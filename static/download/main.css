@@ -1,0 +1,283 @@
+/* ===== 共通 ===== */
+body {
+    font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+h2 {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+a {
+    color: #1a73e8;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.btn {
+    display: inline-block;
+    padding: 6px 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.btn:hover {
+    background-color: #eee;
+}
+
+.btn-active {
+    background-color: #1a73e8;
+    color: #fff;
+    border-color: #1a73e8;
+}
+
+.link-button {
+    background: none;
+    border: none;
+    color: #1a73e8;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9rem;
+    text-decoration: underline;
+}
+
+.inline-form {
+    display: inline;
+}
+
+.error-message {
+    color: #d32f2f;
+    font-weight: bold;
+}
+
+/* ===== ダウンロード実行画面 ===== */
+.download-container {
+    max-width: 480px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.download-info-table {
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 16px;
+}
+
+.download-info-table th {
+    text-align: left;
+    width: 110px;
+    padding: 10px 12px;
+    color: #666;
+    vertical-align: middle;
+}
+
+.download-info-table td {
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
+.download-form {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.download-form input[type="password"] {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.download-form button {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    background-color: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.download-form button:hover {
+    background-color: #1558b0;
+}
+
+/* ===== 下書き表示画面 ===== */
+.draft-container {
+    max-width: 600px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+#draft-text {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: monospace;
+    font-size: 0.95rem;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.draft-test-section {
+    margin: 8px 0;
+    padding: 8px 10px;
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.draft-test-label {
+    color: #666;
+    margin-right: 4px;
+}
+
+.draft-test-link {
+    color: #1a73e8;
+    word-break: break-all;
+}
+
+#copy-message {
+    margin-left: 8px;
+    color: #1a73e8;
+}
+
+/* ===== 管理画面 ===== */
+.manage-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.manage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.manage-header-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 16px 0 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 0.85rem;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 6px 8px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+th {
+    background-color: #f0f0f0;
+}
+
+.issue-list-table {
+    margin-bottom: 24px;
+}
+
+/* 行の背景色 */
+.row-downloaded {
+    background-color: #d6f0ff; /* 水色 */
+}
+
+.row-expired {
+    background-color: #e0e0e0; /* グレー */
+}
+
+.row-deleted {
+    opacity: 0.5;
+}
+
+/* ユーザー管理 */
+.user-table .edit-mode {
+    background-color: #fafafa;
+}
+
+.user-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.user-form-title {
+    margin: 0 0 4px 0;
+    font-weight: bold;
+}
+
+.user-form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-form-row label {
+    width: 90px;
+    flex-shrink: 0;
+    color: #444;
+}
+
+.user-form-row input[type="text"],
+.user-form-row input[type="password"] {
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    min-width: 200px;
+}
+
+.user-form-note {
+    color: #888;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+.btn-home {
+    font-weight: bold;
+    background-color: #64d4e6;
+}
+.btn-home:hover {
+    background-color: #2296a8;
+}

@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ダウンロード・サービス</title>
+    <link rel="stylesheet" href="{% static 'download/main.css' %}">
+</head>
+<body>
+    <div class="download-container">
+        <h1>ダウンロード・サービス</h1>
+
+        {% if error %}
+        <p class="error-message">{{ error }}</p>
+        {% endif %}
+
+        {% if is_expired %}
+        <p class="error-message">このダウンロードリンクは無効、または期限切れです。</p>
+        {% else %}
+        <table class="download-info-table">
+            <tr>
+                <th>タイトル</th>
+                <td>{{ token_obj.title|default:"" }}</td>
+            </tr>
+            <tr>
+                <th>アップロード日時</th>
+                <td>{{ token_obj.uploaded_at|date:"Y/m/d H:i" }}</td>
+            </tr>
+            <tr>
+                <th><label for="password">パスワード</label></th>
+                <td>
+                    <form method="post" class="download-form">
+                        {% csrf_token %}
+                        <input type="password" id="password" name="password" required>
+                        <button type="submit">ダウンロード実行</button>
+                    </form>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+    </div>
+    <script src="{% static 'download/main.js' %}"></script>
+</body>
+</html>

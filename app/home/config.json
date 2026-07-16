@@ -7,6 +7,13 @@
     "button_label": "Skill Sheet"
   },
   {
+    "name": "ダウンロードツール",
+    "status": "on",
+    "description": "添付ファイルを安全に提供するためのトークン管理。",
+    "url_name": "download:manage",
+    "button_label": "Download Tool"
+  },
+  {
     "name": "テストページ",
     "status": "on",
     "description": "メニューのテスト用ページです。",

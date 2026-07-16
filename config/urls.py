@@ -27,4 +27,5 @@ urlpatterns = [
     # アプリケーション
     path('test/', include(([path('', _test_page, name='index')], 'test_page'))),
     path('skill_sheet/', include('app.skill_sheet.urls')),
+    path('download/', include('app.download.urls')),
 ]

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'app.home.apps.HomeConfig',
     'app.skill_sheet.apps.SkillSheetConfig',
+    "app.download",
 ]
 
 MIDDLEWARE = [
