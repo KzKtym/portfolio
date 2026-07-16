@@ -1,0 +1,9 @@
+[
+  {
+    "name": "テストページ",
+    "status": "on",
+    "description": "メニューのテスト用ページです。",
+    "url_name": "test_page:index",
+    "button_label": "Test Page"
+  }
+]

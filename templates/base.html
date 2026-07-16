@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PortfolioPages{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'home/base.css' %}">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    {% block extra_css %}
+    {% endblock %}
+</head>
+<body>
+    <!-- ヘッダー部 -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <!-- プロジェクト名・サービス名 -->
+                <div class="logo">
+                    <a href="{% if user.is_authenticated %}{% url 'home:home' %}{% else %}{% url 'index' %}{% endif %}">
+                        <!-- Portfolio Pages -->Portfolio Pages {% block service_name %}{% endblock %}
+                    </a>
+                </div>
+                
+                <!-- ナビゲーション -->
+                <nav class="nav">
+                    {% if user.is_authenticated %}
+                        <!-- ログイン後 -->
+                        <span class="navbar-text me-3"  data-bs-toggle="tooltip" data-bs-placement="bottom"
+                            title="{{ user.get_full_name|default:user.username }}">
+                            <i class="fas fa-user fa-lg user-icon"></i>&nbsp;User
+                        </span>
+
+
+                        {% if user.is_superuser %}
+                            <a href="{% url 'accounts:signup' %}" class="nav-button
+                            signup-button">
+                                新規ユーザー作成
+                            </a>
+                        {% endif %}
+                        
+                        <form method="post" action="{% url 'accounts:logout' %}" 
+                            style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="nav-button logout-button">
+                                ログアウト
+                            </button>
+                        </form>
+                    {% else %}
+                        <!-- 未ログイン時 -->
+                        {% if user.is_superuser %}
+                            <a href="{% url 'accounts:signup' %}" class="nav-button signup-button">
+                                サインアップ
+                            </a>
+                        {% endif %}
+                        
+                        {% if request.resolver_match.url_name != 'login' %}
+                            <a href="{% url 'accounts:login' %}" class="nav-button login-button">
+                                ログイン
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- メッセージ表示 -->
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- ページコンテンツ -->
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <!-- フッター部 -->
+    <footer class="footer">
+        <div class="container">
+            <p class="copyright">
+                &copy; {% now "Y" %} PortfolioPages. All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

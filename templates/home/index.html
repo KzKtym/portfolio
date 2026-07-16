@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Portfolio Pages - ホーム{% endblock %}
+
+{% block extra_css %}
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
+{% block content %}
+<div class="welcome-section">
+    <h1 class="welcome-title">- Members only. -</h1>
+    
+    {% if not user.is_authenticated %}
+        <p class="welcome-description">
+        こちらは特定会員限定サービスです。利用には事前登録が必要です。
+        </p>
+
+    {% else %}
+        <div class="welcome-actions">
+            <meta http-equiv="refresh" content="0; url={% url 'home:home' %}">
+            <p class="welcome-description">
+            ※ログイン中（自動遷移しなかった場合は下記クリック）...
+            </p>
+            <a href="{% url 'home:home' %}" class="button button-primary">
+                サービスＴＯＰへ移動
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

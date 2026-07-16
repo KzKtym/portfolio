@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}ホーム - PortfolioPages{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="{% static 'home/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-section">
+    <div class="dashboard-header">
+        <h1>サービスＴＯＰ</h1>
+    </div>
+    <div class="system-infomation">
+        {{ system_infomation }}
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span class="stat-label">アカウント：</span>{{ user.username }} （{% if user.is_superuser %}管理者{% else %}一般ユーザー{% endif %}）
+            <span class="stat-label">最終ログイン：</span>{{ user.last_login|date:"Y年n月j日 H:i" }}
+        </div>
+    </div>
+</div>
+
+<div class="services-section">
+    <h2>サービス一覧</h2>
+    <div class="services-grid">
+        {% for service in services %}
+            {% if service.status == 'on' and service.url_name %}
+            <a href="{% url service.url_name %}" class="service-card clickable">
+            {% else %}
+            <div class="service-card{% if service.status == 'off' %} coming-soon{% endif %}">
+            {% endif %}
+                <div class="service-header">
+                    {% if service.status == 'on' %}
+                        <span class="service-status status-available">利用可能</span>
+                    {% else %}
+                        <span class="service-status status-coming-soon">準備中</span>
+                    {% endif %}
+                    <br>
+                    <h3 style="display: inline;">{{ service.name }}</h3>
+                </div>
+                <p class="service-description">
+                    {{ service.description }}
+                </p>
+            {% if service.status == 'on' and service.url_name %}
+            </a>
+            {% else %}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="account-section">
+    <h2>アカウント設定</h2>
+    <div class="account-actions">
+        <a href="{% url 'accounts:password_change' %}" class="button button-secondary">
+            パスワード変更
+        </a>
+
+        {% if user.is_superuser %}
+            <a href="{% url 'accounts:signup' %}" class="button button-secondary">
+                新規ユーザー作成
+            </a>
+
+            <a href="{% url 'admin:index' %}" class="button button-secondary">
+                管理画面
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

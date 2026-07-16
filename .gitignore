@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# メディアファイル（実行時生成、コミット対象外）
+media/

@@ -1,0 +1,44 @@
+.system-infomation {
+    padding-left: 0.5em;
+    font-size: 1.2rem;
+    color: #6c757d;
+    margin-left: 2rem;
+    margin-bottom: 1.5rem;
+}
+.system-infomation ul {
+    padding-left: 1.5em;  /* または適宜調整 */
+}
+
+
+.service-card.clickable {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+.service-card.clickable:hover {
+    color: inherit;
+}
+
+/* ===== DASHBOARD ===== */
+.dashboard-section {
+    margin-bottom: 2rem;
+}
+
+.dashboard-header {
+    margin-bottom: 1rem;
+}
+
+.dashboard-header h1 {
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    margin-left: 2rem;
+}
+
