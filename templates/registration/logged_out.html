@@ -1,8 +1,32 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head><meta charset="utf-8"><title>ログアウト</title></head>
-<body>
-  <h1>ログアウトしました（プレースホルダー）</h1>
-  <p><a href="{% url 'accounts:login' %}">再度ログインする</a></p>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}ログアウト - PortfolioPages{% endblock %}
+
+{% block extra_css %}
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'home/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-message">
+        <h1 class="auth-title">ログアウト完了</h1>
+        
+        <div class="logout-message">
+            <p class="message-text">
+                正常にログアウトしました。<br>
+                ご利用ありがとうございました。
+            </p>
+        </div>
+
+        <div class="auth-actions">
+            <a href="{% url 'index' %}" class="button button-primary">
+                トップページへ
+            </a>
+            <a href="{% url 'accounts:login' %}" class="button button-secondary">
+                再ログイン
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

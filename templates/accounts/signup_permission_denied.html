@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}アクセス拒否 - PortfolioPages{% endblock %}
+
+{% block extra_css %}
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'home/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-message error-message">
+        <h1 class="auth-title">アクセス拒否</h1>
+        
+        <div class="error-content">
+            <div class="error-icon">🚫</div>
+            <p class="message-text">
+                ユーザー作成機能は管理者のみご利用いただけます。
+            </p>
+            <p class="message-detail">
+                新規ユーザーの作成が必要な場合は、管理者にお問い合わせください。
+            </p>
+        </div>
+
+        <div class="auth-actions">
+            <a href="{% url 'home:home' %}" class="button button-primary">
+                ホームへ戻る
+            </a>
+            <a href="{% url 'accounts:login' %}" class="button button-secondary">
+                ログイン
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
