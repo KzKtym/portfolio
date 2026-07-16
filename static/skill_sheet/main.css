@@ -1,0 +1,221 @@
+/* 全体設定 */
+body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 30px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin: 10px;
+}
+
+hr {
+    border: none;
+    border-top: 2px solid #ddd;
+    margin: 20px 0;
+}
+
+/* 検索セクション */
+.search-section {
+    margin: 20px 0;
+}
+
+.search-section label {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.search-section input[type="text"] {
+    padding: 5px;
+    font-size: 14px;
+}
+
+.search-section button {
+    padding: 5px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.search-section button:hover {
+    background-color: #45a049;
+}
+
+.search-infomation {
+    margin-left: 10px;
+    font-size: 80%;
+}
+
+.top-infomation {
+    text-align: center;
+    font-size: 80%;
+}
+
+/* 検索結果 */
+.search-results {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.search-results h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.keyword-result {
+    margin-bottom: 15px;
+}
+
+.keyword-result strong {
+    color: #2196F3;
+}
+
+.project-item a {
+    text-decoration: none;
+    margin-left: 20px;
+    color: #555;
+}
+.project-item a:hover {
+    text-decoration: underline;
+    color: #2196F3;  /* ホバー時の色 */
+}
+
+/* パーソナル情報 */
+.personal-info {
+    margin: 20px 0;
+}
+
+.personal-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.personal-table th,
+.personal-table td {
+    border: 1px solid #ddd;
+    padding: 5px 8px;
+    text-align: left;
+}
+
+.personal-table th {
+    background-color: #96c0ea;
+    font-weight: bold;
+    width: 88px;
+    text-align: center;
+}
+
+
+.personal-table td {
+    background-color: #ffffff;
+}
+
+/* スキル情報 */
+.skill-sheets {
+    margin: 20px 0;
+}
+
+.skill-item {
+    margin-bottom: 10px;
+    padding: 15px;
+    background-color: #fafafa;
+    border: 1px solid #e0e0e0;
+}
+
+.skill-item.highlighted {
+    background-color: #ffff99;
+}
+
+.skill-header {
+    font-size: 16px;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    border-bottom: #999 1px solid;
+}
+
+.project-name {
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.skill-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.skill-detail-table th,
+.skill-detail-table td {
+    border: 1px solid #999;
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.skill-detail-table th {
+    background-color: #f5cf91;
+    font-weight: bold;
+    text-align: right;
+    width: 85px;
+    white-space: nowrap;
+}
+
+.skill-detail-table td {
+    background-color: #ffffff;
+    line-height: 1.6;
+}
+
+.remote-status {
+    margin-left: 20px;
+}
+
+/* キーワードハイライト */
+.keyword-highlight {
+    font-weight: bold;
+    background-color: inherit;
+}
+
+/* ページTOPへスクロール */
+html {
+    scroll-behavior: smooth; /* 滑らかにスクロール */
+}
+
+.top-btn {
+    position: fixed;
+    bottom: 10px;
+    right: 25px;
+    background-color: #fff;
+    color: #333;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    font-size: 24px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 999;
+}
+
+.pagetop_arrow {
+    height: 10px;
+    width: 10px;
+    border-top: 4px solid #666;
+    border-right: 4px solid #666;
+    transform: translateY(20%) rotate(-45deg);
+}

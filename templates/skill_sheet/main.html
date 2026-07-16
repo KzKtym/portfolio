@@ -1,0 +1,164 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スキルシート</title>
+    <link rel="stylesheet" href="{% static 'common.css' %}">
+    <link rel="stylesheet" href="{% static 'skill_sheet/main.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="h1-home-link">
+            <a href="{% url 'home:home' %}">&lt;Home&gt;</a>
+            <h1>スキルシート</h1>
+        </div>        
+        <div class="top-infomation">※シート内を全文検索して結果を一覧（該当欄へのリンク、実績合計）、該当案件と文字をハイライト表示します。</div>
+        <hr>
+        
+        <!-- 検索フォーム -->
+        <div class="search-section">
+            <form method="get" action="">
+                <label for="search">スキル検索:</label>
+                <input type="text" id="search" name="search" value="{{ search_query }}" size="20">
+                <button type="submit">検索</button>
+                <span class="search-infomation">※空白区切りで複数キーOR検索可（例"AI python"]）</span></form>
+            </form>
+        </div>
+        
+        <!-- 検索結果表示欄 -->
+        {% if search_results %}
+        <div class="search-results">
+            <h3>- 検索結果 -</h3>
+            {% for keyword, result in search_results.items %}
+            <div class="keyword-result">
+                <strong>{{ keyword }}</strong>： 案件数（{{ result.count }}件） 実績合計（{{ result.duration }}）
+                {% for project in result.projects %}
+                <div class="project-item">
+                    <a href="#skill-{{ project.no }}">- No.{{ project.no }} {{ project.start_date }}-{{ project.end_date }}({{ project.duration }})： {{ project.name }}</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <hr>
+        
+        <!-- パーソナル情報欄 -->
+        <div class="personal-info">
+            <table class="personal-table">
+                <tr>
+                    <th>登録No.</th>
+                    <td>{{ personal.registration_no }}</td>
+                    <th>所　属</th>
+                    <td>{{ personal.affiliation }}</td>
+                </tr>
+                <tr>
+                    <th>年　齢</th>
+                    <td>{{ personal.age }}</td>
+                    <th>性　別</th>
+                    <td>{{ personal.gender }}</td>
+                </tr>
+                <tr>
+                    <th>資　格</th>
+                    <td>{{ personal.qualification }}</td>
+                    <th>学　歴</th>
+                    <td>{{ personal.education }}</td>
+                </tr>
+                <tr>
+                    <th>稼　動</th>
+                    <td>{{ personal.availability }}</td>
+                    <th>最 寄 駅</th>
+                    <td>{{ personal.nearest_station }}</td>
+                </tr>
+                <tr>
+                    <th>得意分野</th>
+                    <td colspan="3">{{ personal.specialty_field }}</td>
+                </tr>
+                <tr>
+                    <th>得意技術</th>
+                    <td colspan="3">{{ personal.specialty_tech }}</td>
+                </tr>
+                <tr>
+                    <th>得意業務</th>
+                    <td colspan="3">{{ personal.specialty_business }}</td>
+                </tr>
+                <tr>
+                    <th>自 己 PR</th>
+                    <td colspan="3">{{ personal.self_pr|linebreaksbr }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <hr>
+        <!-- スキル情報一覧 -->
+        <div class="skill-sheets">
+            {% for sheet in skill_sheets %}
+            <div id="skill-{{ sheet.no }}" class="skill-item {% if sheet.highlighted %}highlighted{% endif %}" data-sheet-id="{{ sheet.id }}">
+                <div class="skill-header">
+                    No.{{ sheet.no }}：<span class="project-name searchable">{{ sheet.project_name }}</span>
+                </div>
+                <table class="skill-detail-table">
+                    <tr>
+                        <th>期間：</th>
+                        <td>{{ sheet.start_date }} ～ {{ sheet.end_date }}（{{ sheet.duration }}）
+                            <span class="remote-status searchable">{{ sheet.remote_status }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>業務内容：</th>
+                        <td class="searchable">{{ sheet.content|linebreaksbr }}</td>
+                    </tr>
+                    {% if sheet.personnel != '' %}
+                    <tr>
+                        <th>人員：</th>
+                        <td>{{ sheet.personnel }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>使用言語：</th>
+                        <td class="searchable">{{ sheet.lang }}</td>
+                    </tr>
+                    <tr>
+                        <th>ＤＢ：</th>
+                        <td class="searchable">{{ sheet.db }}</td>
+                    </tr>
+                    <tr>
+                        <th>Server：</th>
+                        <td class="searchable">{{ sheet.os }}</td>
+                    </tr>
+                    <tr>
+                        <th>Tool 等：</th>
+                        <td class="searchable">{{ sheet.tools }}</td>
+                    </tr>
+                    <tr>
+                        <th>担当工程：</th>
+                        <td class="searchable">{{ sheet.processes }}</td>
+                    </tr>
+                    {% if sheet.remarks != '-' %}
+                    <tr>
+                        <th>備考：</th>
+                        <td class="searchable">{{ sheet.remarks|linebreaksbr }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+            <hr>
+            {% endfor %}
+        </div>
+    </div>
+    <button type="button" class="top-btn">
+        <div class="pagetop_arrow"></div>
+    </button>
+    <script src="{% static 'common.js' %}"></script>
+    <script src="{% static 'skill_sheet/main.js' %}"></script>
+    <script>
+        // キーワードをJavaScriptに渡す
+        const keywords = {{ keywords|safe }};
+        if (keywords.length > 0) {
+            highlightKeywords(keywords);
+        }
+    </script>
+</body>
+</html>

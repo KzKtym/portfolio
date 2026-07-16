@@ -24,6 +24,7 @@ urlpatterns = [
     # ホーム（ログイン後）
     path('home/', include('app.home.urls')),
 
-    # ダミー画面: app/home/config.json の url_name "test_page:index" に対応
+    # アプリケーション
     path('test/', include(([path('', _test_page, name='index')], 'test_page'))),
+    path('skill_sheet/', include('app.skill_sheet.urls')),
 ]

@@ -1,5 +1,12 @@
 [
   {
+    "name": "スキルシート",
+    "status": "on",
+    "description": "個人用のスキルシートです。案件種別や開発言語を検索し、ハイライト表示、月数集計などが行えます。",
+    "url_name": "skill_sheet:index",
+    "button_label": "Skill Sheet"
+  },
+  {
     "name": "テストページ",
     "status": "on",
     "description": "メニューのテスト用ページです。",

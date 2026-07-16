@@ -1,0 +1,80 @@
+/* ページTOPへスクロール */
+.top-btn {
+    border: none;  /* ボタンのデフォルトスタイルをリセット */
+    position: fixed;
+    bottom: 50px;
+    right: 20px;
+    background-color: #fff;
+    color: #333;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none; /* 初期は非表示 */
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    font-size: 24px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 999;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+.top-btn.show {
+    display: flex;
+}
+
+.top-btn:hover {
+    opacity: 0.7;
+}
+
+.pagetop_arrow {
+    height: 10px;
+    width: 10px;
+    border-top: 4px solid #666;
+    border-right: 4px solid #666;
+    transform: translateY(20%) rotate(-45deg);
+}
+.note-in-blue {
+    color: blue;
+}
+
+.btn {
+    font-size: 14px;
+    font-weight: bold;
+    padding: 6px 12px;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-home {
+    background-color: #17a2b8;
+}
+.btn-home:hover {
+    background-color: #138496;
+}
+
+.btn-search {
+    background-color: #007bff;
+    border: none;
+    cursor: pointer;
+}
+.btn-search:hover {
+    background-color: #0056b3;
+}
+
+.nav-link, .navbar-text {
+    margin-left: 10px;
+}
+
+.h1-home-link {
+    text-align: right;
+}
+
+.header-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
