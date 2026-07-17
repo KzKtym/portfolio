@@ -1,0 +1,94 @@
+{% extends "rag_tr_tool/base.html" %}
+{% load static %}
+
+{% block title %}実験一覧 - RAG Training Tool{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>実験一覧</h2>
+    <div>
+        <button type="button" class="btn btn-outline-secondary" onclick="copySelected('title')">T-CC</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="copySelected('metrics')">MR-CC</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="copySelected('params')">P-CC</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="copySelected('all')">All-CC</button>
+        <button type="button" class="btn btn-danger" onclick="deleteSelected()">削除</button>
+        <button type="button" class="btn btn-outline-primary" onclick="newExperiment()">新規実験</button>
+        <button type="button" class="btn btn-warning" onclick="toggleStarSelected()" style="font-weight:bold;color:#333;">Star</button>
+        <button type="button" class="btn btn-primary" onclick="compareSelected()">比較</button>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle m-0">
+            <thead class="table-secondary">
+                <tr>
+                    <th style="width: 60px;">ID</th>
+                    <th style="width: 160px;">実行日時</th>
+                    <th>タイトル</th>
+                    <th style="width: 100px;">MRR</th>
+                    <th style="width: 100px;">Recall@K</th>
+                    <th style="width: 60px;">QRY</th>
+                    <th>Parameters</th>
+                    <th id="checkAllOff" style="width: 60px; cursor: pointer;" title="クリックで全解除">選択</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in experiments %}
+                <tr class="exp-row" data-id="{{ e.id }}"
+                    data-params='{{ e.parameters_json }}'
+                    data-params-display="{{ e.parameters_display }}"
+                    data-name="{{ e.name|default:'' }}"
+                    data-mrr="{{ e.mrr|stringformat:'.4f' }}"
+                    data-recall="{{ e.recall_at_5|stringformat:'.4f' }}"
+                    data-starred="{% if e.is_starred %}true{% else %}false{% endif %}"
+                    data-icon="{{ e.icon }}"
+                    style="cursor:pointer;">
+                    <td>{{ e.id }}</td>
+                    <td>{{ e.created_at|date:"Y/m/d H:i" }}</td>
+                    <td>
+                        {{ e.name|default:"(no title)" }}
+                        {% if e.is_starred %}
+                            <span class="ms-1 badge bg-warning text-dark star-badge" style="font-size:0.7rem;">★</span>
+                        {% endif %}
+                        {% if e.icon == "new" %}
+                            <span class="ms-1 badge bg-success icon-badge" style="font-size:0.7rem;">New</span>
+                        {% elif e.icon == "1st" %}
+                            <span class="ms-1 badge bg-primary icon-badge" style="font-size:0.7rem;">1st</span>
+                        {% elif e.icon == "2nd" %}
+                            <span class="ms-1 badge bg-secondary icon-badge" style="font-size:0.7rem;">2nd</span>
+                        {% endif %}
+                    </td>
+                    <td class="fw-bold">{{ e.mrr|stringformat:".4f" }}</td>
+                    <td class="fw-bold">{{ e.recall_at_5|stringformat:".4f" }}</td>
+                    <td class="text-center">{{ e.query_count }}</td>
+                    <td>{{ e.parameters_display }}</td>
+                    <td class="check-cell" style="cursor:default;">
+                        <input type="checkbox" name="exp_id" value="{{ e.id }}" class="exp-check">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<form id="compareForm" action="{% url 'compare' %}" method="get" style="display:none;"></form>
+<form id="deleteForm" action="{% url 'delete_experiments' %}" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="ids" id="deleteIds">
+    <input type="hidden" name="project_id" value="{{ project_id }}">
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<div id="jsConfig"
+     data-toggle-star-base="{% url 'toggle_star' 0 %}"
+     data-csrf-token="{{ csrf_token }}"
+     data-new-url="{% url 'new_experiment' project_id=project_id %}"
+     style="display:none;">
+</div>
+<script src="{% static 'rag_tr_tool/common.js' %}"></script>
+<script src="{% static 'rag_tr_tool/list.js' %}"></script>
+{% endblock %}

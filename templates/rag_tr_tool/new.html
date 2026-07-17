@@ -1,0 +1,78 @@
+{% extends "rag_tr_tool/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="card shadow-sm border-0 p-4">
+    <form id="runForm" action="{% url 'run_experiment' project_id=project_id %}" method="post">
+        {% csrf_token %}
+
+        {# ページタイトル #}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>新規実験</h2>
+            <a href="{% url 'experiment_list' project_id=project_id %}" class="btn btn-primary px-4">一覧</a>
+        </div>
+
+        {# 実験タイトル #}
+        <div class="mb-3">
+            <label class="form-label fw-bold">実験タイトル（任意）：</label>
+            <input type="text" name="name" id="expName" class="form-control" placeholder="実験タイトルを入力">
+        </div>
+
+        {# Index状態 + Runボタン #}
+        <div class="mb-3 d-flex align-items-center gap-4">
+            <div>
+                <label class="form-label fw-bold mb-0">Index：</label>
+                <span id="indexStatus" class="ms-2 fw-bold {% if index_exists %}text-success{% else %}text-danger{% endif %}">
+                    {% if index_exists %}有{% if index_info.created_at %}（{{ index_info.created_at }} RT. {{ index_info.creation_time }}）{% endif %}{% else %}無{% endif %}
+                </span>
+            </div>
+            <button type="button" id="recheckBtn" class="btn btn-warning" style="font-weight: bold;color: #333;">再確認</button>
+            <button type="button" id="runBtn" class="btn btn-primary px-5">Run</button>
+            <div id="rebuildCheckWrap" class="d-flex align-items-center gap-2">
+                <input type="checkbox" id="rebuildCheck" name="rebuild_index" value="1" class="form-check-input mt-0" disabled>
+                <label for="rebuildCheck" id="rebuildLabel" class="form-check-label fw-bold">再作成</label>
+            </div>
+        </div>
+
+        {# Querys #}
+        <div class="mb-3">
+            <label class="form-label fw-bold mb-0">Querys：</label>
+            <span class="ms-2">{% if query_count is not None %}{{ query_count }}{% else %}—{% endif %}</span>
+        </div>
+
+        {# Chunks #}
+        <div class="mb-3">
+            <label class="form-label fw-bold mb-0">Chunks：</label>
+            <span id="chunkStats" class="ms-2">
+                {% if index_info.chunk_stats %}
+                    Total: {{ index_info.chunk_stats.total }} / 平均: {{ index_info.chunk_stats.avg }} / 最大: {{ index_info.chunk_stats.max }} / 最小: {{ index_info.chunk_stats.min }}
+                {% else %}—{% endif %}
+            </span>
+        </div>
+
+        {# Parameters #}
+        <div class="mb-3">
+            <label class="form-label fw-bold">Parameters：</label>
+            <textarea id="paramInput" class="form-control" rows="8" placeholder="key:value (改行またはカンマ区切り)"></textarea>
+            <input type="hidden" name="parameters" id="finalParams">
+            <div class="form-text text-end">例) top_k:5, chunk_size:500, overlap:100, chunker:langchain</div>
+        </div>
+
+    </form>
+</div>
+
+{% include "rag_tr_tool/spec_panel.html" with spec_text=spec_text %}
+{% endblock %}
+
+{% block extra_js %}
+<div id="jsConfig"
+     data-last-params="{{ last_params_json }}"
+     data-last-name="{{ last_name }}"
+     data-index-exists="{{ index_exists|yesno:'true,false' }}"
+     data-check-index-url="{% url 'check_index' %}"
+     data-project-id="{{ project_id }}"
+     style="display:none;">
+</div>
+<script src="{% static 'rag_tr_tool/common.js' %}"></script>
+<script src="{% static 'rag_tr_tool/new.js' %}"></script>
+{% endblock %}

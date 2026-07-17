@@ -1,0 +1,82 @@
+{% extends "rag_tr_tool/base.html" %}
+{% load static %}
+
+{% block title %}実験比較 - RAG Training Tool{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>実験比較</h2>
+    <div class="d-flex gap-2">
+        <a href="{% url 'new_experiment' project_id=exp_a.project_id %}"
+         class="btn btn-outline-primary">新規実験</a>
+        <a href="{% url 'experiment_list' project_id=exp_a.project_id %}"
+         class="btn btn-outline-secondary">一覧</a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <span>項種（EVL:評価項目、PRM：Parameter項目）</span>
+    <table class="table align-middle m-0 text-center">
+        <thead class="table-secondary">
+            <tr>
+                <th style="width: 8%">項種</th>
+                <th class="text-start" style="width: 20%">項目名</th>
+                <th style="width: 24%">ID:{{ exp_a.id}}<br />{{ exp_a.name|default:"Exp A" }}</th>
+                <th style="width: 24%">ID:{{ exp_b.id}}<br />{{ exp_b.name|default:"Exp B" }}</th>
+                <th style="width: 24%">差分</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# --- EVL rows --- #}
+            <tr>
+                <td class="fw-bold badge-evl">EVL</td>
+                <td class="text-start">MRR</td>
+                <td>{{ exp_a.mrr }}</td>
+                <td>{{ exp_b.mrr }}</td>
+                <td class="fw-bold {% if mrr_diff >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ mrr_diff|stringformat:"+0.4f" }}
+                </td>
+            </tr>
+            <tr>
+                <td class="fw-bold badge-evl">EVL</td>
+                <td class="text-start">Recall@K</td>
+                <td>{{ exp_a.recall_at_5 }}</td>
+                <td>{{ exp_b.recall_at_5 }}</td>
+                <td class="fw-bold {% if recall_diff >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ recall_diff|stringformat:"+0.4f" }}
+                </td>
+            </tr>
+            {# --- PRM rows --- #}
+            {% for item in param_comparison %}
+            <tr {% if item.is_diff %}class="table-warning"{% endif %}>
+                <td class="fw-bold badge-prm">PRM</td>
+                <td class="text-start"><strong>{{ item.key }}</strong></td>
+                <td>{{ item.val1 }}</td>
+                <td>{{ item.val2 }}</td>
+                <td></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-dark text-white">SPEC Snapshot Diff</div>
+    <div class="card-body p-0">
+        <div class="m-0 p-3 bg-white" style="font-size: 0.85rem; line-height: 1.5; font-family: monospace; white-space: pre; overflow-x: auto;">{% for line in spec_diff %}{% if line|slice:":1" == "-" %}<span class="diff-removed d-block">{{ line }}</span>{% elif line|slice:":1" == "+" %}<span class="diff-added d-block">{{ line }}</span>{% else %}<span class="d-block">{{ line }}</span>{% endif %}{% endfor %}</div>
+    </div>
+</div>
+
+<style>
+.diff-removed { background-color: #ffeef0; color: #b31d28; }
+.diff-added   { background-color: #e6ffed; color: #22863a; }
+.badge-evl    { background-color: #fff3e0 !important; color: #e65100 !important; }
+.badge-prm    { background-color: #e3f2fd !important; color: #1565c0 !important; }
+</style>
+
+{% include "rag_tr_tool/rewrite_analysis_panel.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'rag_tr_tool/rewrite_analysis.js' %}"></script>
+{% endblock %}

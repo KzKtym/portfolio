@@ -1,0 +1,23 @@
+{# ===== LLM回答パネル ===== #}
+<div class="card shadow-sm border-0 mb-4" data-exp-id="{{ exp.id }}" data-query-count="{{ meta.query_count }}">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span><span class="fw-bold">LLMによる回答生成</span>（'Retriever result' + 'Prompt' → 'LLM' → 'Answer'）</span>
+        <button id="generateBtn" class="btn btn-sm btn-outline-primary">
+            {% if has_answers %}再生成{% else %}回答生成{% endif %}
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div id="answersView" style="font-family:monospace; font-size:0.85rem; padding:1rem;">
+            {% if has_answers %}
+            {% for item in answers %}
+            <div class="mb-3">
+                <div class="fw-bold">Q{{ forloop.counter }}: {{ item.query }}</div>
+                <div style="white-space:pre-wrap; padding-left:1rem;">{{ item.answer }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-muted small">「回答生成」ボタンを押すとLLMが清書した回答が表示されます。</div>
+            {% endif %}
+        </div>
+    </div>
+</div>

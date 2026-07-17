@@ -1,0 +1,9 @@
+{
+  "project_description_max_length": 40,
+  "spec_scan_paths": [
+    "core/",
+    "core/rewrite/rewrite_prompt.txt"
+  ],
+  "evaluation_script": "core/evaluation.py",
+  "openai_api_key": "xxxxxxxxxxxxxxxxxxxxx"
+}

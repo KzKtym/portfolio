@@ -8,6 +8,12 @@ django = "*"
 python-decouple = "==3.8.*"
 psycopg2-binary = "*"
 markdown = "*"
+faiss-cpu = "==1.14.2"
+langchain-text-splitters = "==1.1.2"
+numpy = "==2.4.6"
+openai = "==2.44.0"
+rank-bm25 = "==0.2.2"
+sentence-transformers = "==5.5.1"
 
 [dev-packages]
 

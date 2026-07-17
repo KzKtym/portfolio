@@ -14,10 +14,10 @@
     "button_label": "Download Tool"
   },
   {
-    "name": "テストページ",
+    "name": "RAG実験支援ツール",
     "status": "on",
-    "description": "メニューのテスト用ページです。",
-    "url_name": "test_page:index",
-    "button_label": "Test Page"
+    "description": "RAG開発時の複雑な実験パラメータ管理やパイプライン構造の把握を効率化し、学習効率の向上も目指す。",
+    "url_name": "rag_index",
+    "button_label": "RAG Tool"
   }
 ]

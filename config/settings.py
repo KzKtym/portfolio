@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'app.home.apps.HomeConfig',
     'app.skill_sheet.apps.SkillSheetConfig',
     "app.download",
+    "app.rag_tr_tool.web",
 ]
 
 MIDDLEWARE = [
@@ -75,6 +76,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "app.rag_tr_tool.context_processors.current_project",
             ],
         },
     },

@@ -1,0 +1,26 @@
+{# ===== Rewrite Analysis パネル ===== #}
+<div class="card shadow-sm border-0 mb-4"
+     data-exp-id-a="{{ exp_a.id }}"
+     data-exp-id-b="{{ exp_b.id }}">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Rewrite Analysis</span>
+        <button id="rwaBtn" class="btn btn-sm btn-outline-light"
+                {% if not show_rwa_btn %}disabled{% endif %}>
+            Rewrite比較実行
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div id="rwaView" style="font-family:monospace; font-size:0.85rem; padding:1rem;">
+            {% if not show_rwa_btn and rwa_disabled_reasons %}
+            <div class="text-muted small">
+                <div class="mb-1">Rewrite比較を実行できません：</div>
+                {% for reason in rwa_disabled_reasons %}
+                <div>・{{ reason }}</div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-muted small">「Rewrite比較実行」ボタンを押すと分析結果が表示されます。</div>
+            {% endif %}
+        </div>
+    </div>
+</div>

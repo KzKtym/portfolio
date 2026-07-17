@@ -28,4 +28,5 @@ urlpatterns = [
     path('test/', include(([path('', _test_page, name='index')], 'test_page'))),
     path('skill_sheet/', include('app.skill_sheet.urls')),
     path('download/', include('app.download.urls')),
+    path("rag/", include("app.rag_tr_tool.web.urls")),
 ]

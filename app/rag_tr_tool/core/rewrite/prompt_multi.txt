@@ -1,0 +1,13 @@
+# SPEC_multi_query: 35/Query Rewrite/prompt:Multi Query生成
+Generate 2 alternative search queries for the following user query.
+
+Requirements:
+- Preserve the original intent
+- Use different wording or synonyms
+- Do not introduce new concepts
+- Keep domain-specific terms accurate
+
+Output only the 2 queries, one per line, without numbering or explanation.
+
+Query:
+{query}

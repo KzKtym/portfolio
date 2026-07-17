@@ -1,0 +1,114 @@
+{# ===== Rewrite詳細パネル（result.html内に include） ===== #}
+{% if rewrite_data %}
+
+{# ----- Rewrite1：サマリーテーブル ----- #}
+<div id="rewrite1Content">
+{% if rewrite_data.0.mode == "multi" %}
+<div class="fw-bold mb-3">Multi Query Analysis Summary</div>
+{% else %}
+<div class="fw-bold mb-3">Query Rewrite Analysis Summary</div>
+{% endif %}
+<div class="table-responsive">
+<table class="table table-sm table-bordered align-middle" style="font-size:0.82rem;">
+    <thead class="table-light">
+        <tr>
+            <th>Query</th>
+            <th>Original<br>Rank</th>
+            {% if rewrite_data.0.mode == "multi" %}
+            <th>Merged<br>Rank</th>
+            {% else %}
+            <th>Rewrite<br>Rank</th>
+            {% endif %}
+            <th>MRR Δ</th>
+            <th>Rewrite<br>Gain</th>
+            <th>Rewrite<br>Quality</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for q in rewrite_data %}
+        <tr>
+            <td>Q{{ forloop.counter }}</td>
+            <td>{% if q.original_rank %}{{ q.original_rank }}{% else %}－{% endif %}</td>
+            <td>{% if q.rewrite_rank %}{{ q.rewrite_rank }}{% else %}－{% endif %}</td>
+            <td class="{% if q.mrr_delta > 0 %}text-success fw-bold{% elif q.mrr_delta < 0 %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                {% if q.mrr_delta > 0 %}+{% endif %}{{ q.mrr_delta|stringformat:".4f" }}
+            </td>
+            <td class="{% if q.rewrite_gain %}text-success fw-bold{% else %}text-muted{% endif %}">
+                {% if q.rewrite_gain %}Yes{% else %}No{% endif %}
+            </td>
+            <td></td>
+            <td></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+
+{# ----- Rewrite2：クエリ単位詳細 ----- #}
+<div id="rewrite2Content" style="display:none;">
+{% if rewrite_data.0.mode == "multi" %}
+<div class="fw-bold mb-3">Multi Query Analysis</div>
+{% else %}
+<div class="fw-bold mb-3">Query Rewrite Analysis</div>
+{% endif %}
+
+{# サマリー行（views.pyで計算済み） #}
+<div class="mb-3">改善 {{ rewrite_summary.improved }} / 悪化 {{ rewrite_summary.degraded }} / 変化なし {{ rewrite_summary.unchanged }} / Rewrite Gain: {{ rewrite_summary.gain }}</div>
+
+{# クエリ単位詳細 #}
+{% for q in rewrite_data %}
+<div class="mb-4 border-start ps-3">
+    <div class="fw-bold">Q{{ forloop.counter }}: {{ q.query }}</div>
+    {% if q.mode == "multi" %}
+    {# Multi Query: gated情報 + 生成クエリ一覧 #}
+    {% if q.gated %}
+    <div class="text-warning small">→ Gated (top1={{ q.gate_top1|stringformat:".4f" }}, margin={{ q.gate_margin|stringformat:".4f" }}) → No Multi</div>
+    {% else %}
+    {% for gq in q.generated_queries %}
+    <div class="text-muted small">→ Generated {{ forloop.counter }}: {{ gq }}</div>
+    {% endfor %}
+    {% endif %}
+    {% else %}
+    <div class="text-muted small">→ Rewrite: {{ q.rewrite_query }}</div>
+    {% endif %}
+    <div class="mt-1 {% if q.mrr_rewrite > q.mrr_original %}text-success{% elif q.mrr_rewrite < q.mrr_original %}text-danger{% else %}text-muted{% endif %}">
+        {% if q.mode == "multi" %}
+        MRR original: {{ q.mrr_original|stringformat:".4f" }} → merged: {{ q.mrr_rewrite|stringformat:".4f" }}
+        {% else %}
+        MRR original: {{ q.mrr_original|stringformat:".4f" }} → rewrite: {{ q.mrr_rewrite|stringformat:".4f" }}
+        {% endif %}
+    </div>
+    <div class="mt-2 d-flex gap-3" style="font-size:0.8rem;">
+        <div style="min-width:0; flex:1;">
+            <div class="text-muted mb-1">検索結果 (Original)</div>
+            {% for r in q.results_original %}
+            <div>rank{{ r.rank }} {{ r.source }}</div>
+            {% endfor %}
+        </div>
+        <div style="min-width:0; flex:1;">
+            <div class="text-muted mb-1">{% if q.mode == "multi" %}(Merged){% else %}(Rewrite){% endif %}</div>
+            {% for r in q.results_rewrite %}
+            <div {% if r.is_new %}style="color:#0B57D0;"{% endif %}>rank{{ r.rank }} {{ r.source }}</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% if q.mode == "multi" and q.results_per_query %}
+    {# per_query結果 #}
+    <div class="mt-2 d-flex gap-3" style="font-size:0.8rem;">
+        {% for pq in q.results_per_query %}
+        <div style="min-width:0; flex:1;">
+            <div class="text-muted mb-1">Generated {{ forloop.counter }}: {{ pq.query }}</div>
+            {% for r in pq.results %}
+            <div>rank{{ r.rank }} {{ r.source }}</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+</div>
+
+{% endif %}

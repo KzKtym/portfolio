@@ -1,0 +1,176 @@
+{% extends "rag_tr_tool/base.html" %}
+{% load static %}
+
+{% block title %}実験結果 - RAG Training Tool{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>実行結果</h2>
+    <div class="d-flex gap-2 align-items-center">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="ccTitle">T-CC</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="ccMetrics">MR-CC</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="ccParams">P-CC</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="ccAll">All-CC</button>
+        <a href="{% url 'experiment_list' project_id=exp.project_id %}" class="btn btn-primary">一覧</a>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-success shadow-sm mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ message }}
+</div>
+{% endif %}
+
+<div class="card shadow-sm border-0 mb-2">
+    <div class="card-header bg-white fw-bold">評価概要</div>
+    <div class="table-responsive">
+        <table class="table align-middle m-0">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>日時</th>
+                    <th>タイトル</th>
+                    <th>MRR</th>
+                    <th>Recall@K</th>
+                    <th>Parameters</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ exp.id }}</td>
+                    <td>{{ exp.created_at|date:"Y/m/d H:i" }}</td>
+                    <td id="nameCell" style="cursor:pointer; min-width:120px;" data-exp-id="{{ exp.id }}">
+                        {{ exp.name|default:"(no title)" }}
+                    </td>
+                    <td class="fw-bold">{{ exp.mrr|stringformat:".4f" }}</td>
+                    <td class="fw-bold">{{ exp.recall_at_5|stringformat:".4f" }}</td>
+                    <td id="paramsCell">{{ exp.parameters }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="text-muted small mb-2 ps-1">※タイトルクリックで編集可</div>
+
+{# ===== Compare・新規実験ボタン欄 ===== #}
+<div class="d-flex gap-2 mb-3">
+    {% if prev_exp %}
+    <a href="{% url 'compare' %}?ids={{ prev_exp.id }}&ids={{ exp.id }}" class="btn btn-primary px-4">Compare</a>
+    <span class="text-muted align-self-center small">比較相手: ID {{ prev_exp.id }} ({{ prev_exp.name }})</span>
+    {% else %}
+    <button class="btn btn-secondary px-4" disabled>Compare (比較対象なし)</button>
+    {% endif %}
+    <a href="{% url 'new_experiment' project_id=exp.project_id %}?params={{ exp_params_urlenc }}" class="btn btn-outline-primary ms-auto">新規実験</a>
+</div>
+
+{# ===== 評価詳細カード ===== #}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold">評価詳細</span>
+        <div class="d-flex gap-2 align-items-center">
+            {% if has_log %}
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary active" id="btnSummary">Summary</button>
+                <button type="button" class="btn btn-outline-secondary" id="btnFmt1">Form1</button>
+                <button type="button" class="btn btn-outline-secondary" id="btnFmt2">Form2</button>
+                {% if has_rewrite_data %}
+                <button type="button" class="btn btn-outline-secondary" id="btnRewrite1">Rewrite1</button>
+                <button type="button" class="btn btn-outline-secondary" id="btnRewrite2">Rewrite2</button>
+                {% endif %}
+            </div>
+            <button id="copyBtn" class="btn btn-sm btn-outline-secondary" data-exp-id="{{ exp.id }}">Copy</button>
+            <a href="{% url 'download_log' exp.id %}" class="btn btn-sm btn-outline-secondary">Download</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if has_log and details %}
+        {# Summary：初期表示 #}
+        <div id="summaryView" style="font-family:monospace; font-size:0.85rem; padding:1rem;">
+            <div>Query count: {{ meta.query_count }}{% if meta.skipped_count %} (skipped: {{ meta.skipped_count }}){% endif %}</div>
+
+            <div class="mt-2">
+                <div>Chunks</div>
+                <div>Total: {{ meta.total_chunks }}{% if meta.chunk_stats %}, Avg: {{ meta.chunk_stats.avg }}, max: {{ meta.chunk_stats.max }}, min: {{ meta.chunk_stats.min }}{% endif %}</div>
+            </div>
+            <div class="mt-2">
+                <div>Parameters</div>
+                <div id="summaryParams">{% for k, v in exp.parameters.items %}{{ k }}: {{ v }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
+            </div>
+            <div class="mt-2">MRR: {{ exp.mrr|stringformat:".4f" }}, Recall@{{ exp.parameters.top_k|default:"K" }}: {{ exp.recall_at_5|stringformat:".4f" }}</div>
+        </div>
+        {# Form1：表形式 #}
+        <div id="fmt1View" style="display:none; max-height:400px; overflow-y:auto; font-family:monospace; font-size:0.85rem; padding:1rem;">
+            {% if meta.index_creation_time %}<div class="mb-1">Index creation time : {{ meta.index_creation_time }}</div>{% endif %}
+            {% if meta.total_chunks %}<div class="mb-3">Total chunks : {{ meta.total_chunks }}</div>{% endif %}
+            {% for d in details %}
+            <div class="mb-3">
+                <div>Query {{ forloop.counter }}: {{ d.query }}</div>
+                <div class="{% if d.correct_rank == 1 %}text-success fw-bold{% elif d.correct_rank %}text-warning fw-bold{% else %}text-danger fw-bold{% endif %}">
+                    Correct No: {% if d.correct_rank %}{{ d.correct_rank }}{% else %}－{% endif %} / MRR: {{ d.mrr|stringformat:".4f" }}
+                </div>
+                <div>rank&nbsp;&nbsp;score&nbsp;&nbsp;&nbsp;source</div>
+                {% for r in d.results %}
+                <div {% if r.rank == d.correct_rank %}class="text-success fw-bold"{% endif %}>
+                    {{ r.rank }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ r.score }}&nbsp;&nbsp;&nbsp;{{ r.source }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {# Form2：text追加形式（非表示） #}
+        <div id="fmt2View" style="display:none; max-height:400px; overflow-y:auto; font-family:monospace; font-size:0.85rem; padding:1rem;">
+            {% if meta.index_creation_time %}<div class="mb-1">Index creation time : {{ meta.index_creation_time }}</div>{% endif %}
+            {% if meta.total_chunks %}<div class="mb-3">Total chunks : {{ meta.total_chunks }}</div>{% endif %}
+            {% for d in details %}
+            <div class="mb-4">
+                <div>Query {{ forloop.counter }}: {{ d.query }}</div>
+                <div class="{% if d.correct_rank == 1 %}text-success fw-bold{% elif d.correct_rank %}text-warning fw-bold{% else %}text-danger fw-bold{% endif %}">
+                    Correct No: {% if d.correct_rank %}{{ d.correct_rank }}{% else %}－{% endif %}
+                </div>
+                <div class="mt-2">
+                {% for r in d.results %}
+                    <div class="mb-2 {% if r.rank == d.correct_rank %}text-success fw-bold{% endif %}">
+                        <div>--- Rank {{ r.rank }} ---</div>
+                        <div>Score: {{ r.score }}</div>
+                        <div>Source: {{ r.source }}</div>
+                        <div>Text:</div>
+                        <div style="white-space:pre-wrap; padding-left:1rem;">{{ r.text }}</div>
+                    </div>
+                {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-3 text-muted small">詳細データなし（ログファイルが存在しません）</div>
+        {% endif %}
+        {# Rewrite詳細：非表示（has_rewrite_dataがある場合のみ描画） #}
+        {% if has_rewrite_data %}
+        <div id="rewriteView" style="display:none; max-height:400px; overflow-y:auto; font-family:monospace; font-size:0.85rem; padding:1rem;">
+            {% include "rag_tr_tool/rewrite_detail_panel.html" %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# exp メタデータを JS に渡す #}
+<div id="expMeta"
+     data-exp-id="{{ exp.id }}"
+     data-exp-name="{{ exp.name|default:'' }}"
+     data-exp-mrr="{{ exp.mrr|stringformat:'.4f' }}"
+     data-exp-recall="{{ exp.recall_at_5|stringformat:'.4f' }}"
+     data-exp-params="{{ exp_params_json }}"
+     style="display:none;">
+</div>
+
+{% include "rag_tr_tool/spec_panel.html" with spec_text=exp.spec_snapshot %}
+
+{% include "rag_tr_tool/llm_answers_panel.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'rag_tr_tool/common.js' %}"></script>
+<script src="{% static 'rag_tr_tool/result.js' %}"></script>
+<script src="{% static 'rag_tr_tool/llm_answers.js' %}"></script>
+{% endblock %}
