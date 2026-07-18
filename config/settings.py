@@ -16,15 +16,11 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# defaultを持たせない。未設定なら decouple が UndefinedValueError を送出して起動に失敗する。
+SECRET_KEY = config('SECRET_KEY')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+# defaultはFalse（fail-safe）。設定漏れがトレースバック・環境変数の公開に直結しないようにする。
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
@@ -49,6 +45,7 @@ INSTALLED_APPS = [
     'app.skill_sheet.apps.SkillSheetConfig',
     "app.download",
     "app.rag_tr_tool.web",
+    "app.work_shift.apps.WorkShiftConfig",
 ]
 
 MIDDLEWARE = [

@@ -19,5 +19,12 @@
     "description": "RAG開発時の複雑な実験パラメータ管理やパイプライン構造の把握を効率化し、学習効率の向上も目指す。",
     "url_name": "rag_index",
     "button_label": "RAG Tool"
+  },
+  {
+    "name": "シフト作成（デモ版）",
+    "status": "on",
+    "description": "TypeScript + Vue、FastAPI + Django 構成の技術検証用。介護職員向けシフト作成Pocです。",
+    "url_name": "work_shift:spa",
+    "button_label": "Work Shift"
   }
 ]
