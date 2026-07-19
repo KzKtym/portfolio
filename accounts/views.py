@@ -27,12 +27,16 @@ class SignUpView(CreateView):
     """
     管理者によるユーザー作成ビュー
     管理者のみアクセス可能
+
+    元はユーザー自身が登録するサインアップ画面だったが、当サイトでは「新規登録は管理者のみ」
+    というルールにした。ただし逐一 /admin/ を開かなくても登録できるよう、画面自体は残している。
     """
     model = User
     form_class = UserCreationForm
     template_name = 'accounts/signup.html'
-    # home アプリ未実装のため暫定で管理サイトへ。home追加時に 'home:home' へ変更予定。
-    success_url = reverse_lazy('admin:index')
+    # 作成後は管理者が普段いる /home/ へ戻す。連続登録の運用は想定していないため、
+    # 管理サイトへは戻さない（home アプリ未実装だった頃の暫定 'admin:index' から変更）。
+    success_url = reverse_lazy('home:home')
     
     def form_valid(self, form):
         """ユーザー作成成功時の処理"""
