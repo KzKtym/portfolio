@@ -9,13 +9,14 @@
 | `app/home/tests.py` | 246 | 認証リダイレクト、config.json 3系統、Markdownお知らせ、デコレータ |
 | `app/skill_sheet/tests.py` | 539 | モデル、期間3分岐、工程連結、NFKC検索、実績合計3分岐 |
 | `app/download/tests.py` | 1,556 | トークン、API、ダウンロード、案内文下書き、管理画面 |
+| `app/work_shift/tests.py` | 1,272 | 認証境界（全URL走査）、CSRF、入力堅牢性、サービスロジック、SPA配信、FastAPIプロキシ |
 | app/rag_tr_tool/tests.py | 作成中 | ※実装の見直し中 → 詳細： [テスト仕様（検討中）](../docs/rag_tr_tool/test_plan.md)参照 |
 
 ## 実行方法
 
 ```bash
 # 一括
-python manage.py test accounts app.home app.skill_sheet app.download --settings=config.settings_test
+python manage.py test accounts app.home app.skill_sheet app.download app.work_shift --settings=config.settings_test
 
 # アプリ個別
 python manage.py test app.home --settings=config.settings_test
