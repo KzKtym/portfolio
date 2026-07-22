@@ -5,7 +5,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("web", "0002_experiment_is_starred"),
+        ("rag_tr_tool", "0002_experiment_is_starred"),
     ]
 
     operations = [
@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to="web.ragproject",
+                to="rag_tr_tool.ragproject",
             ),
         ),
     ]

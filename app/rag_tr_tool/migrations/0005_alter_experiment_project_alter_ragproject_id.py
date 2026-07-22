@@ -7,14 +7,14 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('web', '0004_init_default_project'),
+        ('rag_tr_tool', '0004_init_default_project'),
     ]
 
     operations = [
         migrations.AlterField(
             model_name='experiment',
             name='project',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='web.ragproject'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='rag_tr_tool.ragproject'),
         ),
         migrations.AlterField(
             model_name='ragproject',

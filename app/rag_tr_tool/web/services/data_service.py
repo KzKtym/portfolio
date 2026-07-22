@@ -1,7 +1,8 @@
 """data_services.py - データ操作（Index確認・実験削除・compare用データ構築）"""
 import difflib
 
-from ..models import Experiment
+from ...models import Experiment
+from app.rag_tr_tool.core.evaluation import normalize_query_option
 from app.rag_tr_tool.core.indexing.index_builder import get_index_info
 from app.rag_tr_tool.utils.spec_extractor import resolve_spec
 from app.rag_tr_tool.utils.log_formatter import get_logs_dir
@@ -85,16 +86,15 @@ def build_compare_data(id1: int, id2: int) -> dict:
     if not show_rwa_btn:
         for exp, has in [(exp1, has_rwa_a), (exp2, has_rwa_b)]:
             if not has:
-                qr = exp.parameters.get("query_rewrite", False)
-                if isinstance(qr, str):
-                    qr = qr.lower() == "true"
+                # 保存されるキーは query_option（rewrite / multi のとき RWA データが生成される）
+                qr = normalize_query_option(exp.parameters.get("query_option")) is not None
                 if qr:
                     rwa_disabled_reasons.append(
-                        f"Exp {exp.id}: Rewriteデータなし（query_rewrite=trueで再実行すると生成されます）"
+                        f"Exp {exp.id}: Rewriteデータなし（query_option=rewrite/multi で再実行すると生成されます）"
                     )
                 else:
                     rwa_disabled_reasons.append(
-                        f"Exp {exp.id}: query_rewrite=false（Rewriteデータは生成されません）"
+                        f"Exp {exp.id}: query_option 未指定（Rewriteデータは生成されません）"
                     )
 
     return {

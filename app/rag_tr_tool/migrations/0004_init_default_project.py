@@ -3,7 +3,7 @@ import django.db.models.deletion
 
 
 def insert_default_project(apps, schema_editor):
-    RagProject = apps.get_model("web", "RagProject")
+    RagProject = apps.get_model("rag_tr_tool", "RagProject")
     RagProject.objects.create(
         id=1,
         name="Default",
@@ -13,14 +13,14 @@ def insert_default_project(apps, schema_editor):
 
 
 def assign_default_project(apps, schema_editor):
-    Experiment = apps.get_model("web", "Experiment")
+    Experiment = apps.get_model("rag_tr_tool", "Experiment")
     Experiment.objects.filter(project__isnull=True).update(project_id=1)
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("web", "0003_ragproject_rename_experiment"),
+        ("rag_tr_tool", "0003_ragproject_rename_experiment"),
     ]
 
     operations = [
@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
             name="project",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                to="web.ragproject",
+                to="rag_tr_tool.ragproject",
             ),
         ),
     ]

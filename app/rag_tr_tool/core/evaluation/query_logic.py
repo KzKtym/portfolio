@@ -15,7 +15,12 @@ def is_gated(results_original: list, gate_mode, gate_top1: float, gate_margin: f
     戻り値: (gated: bool, g_top1: float, g_margin: float)
     gated=True → Multi禁止。
     gate_mode: None=ゲーティング無効 / "top1" / "margin" / "standard"
+    結果0件のときは gated=False を返す（元クエリで何も引けていない以上、
+    Multi Query を禁止する理由が無いため）。
     """
+    if not results_original:
+        return False, 0.0, 0.0
+
     orig_scores = [r["score"] for r in results_original]
     g_top1 = orig_scores[0]
     g_margin = orig_scores[0] - orig_scores[1] if len(orig_scores) > 1 else orig_scores[0]
@@ -85,6 +90,10 @@ def merge_by_score(all_results: list, top_k: int,
     if normalize == "minmax":
         groups = []
         for results in all_results:
+            # 生成クエリが1件も引けないことがあるため、空グループを許容する
+            if not results:
+                groups.append([])
+                continue
             scores = [r["score"] for r in results]
             s_min, s_max = min(scores), max(scores)
             denom = s_max - s_min if s_max != s_min else 1.0
@@ -95,7 +104,7 @@ def merge_by_score(all_results: list, top_k: int,
 
     # gate_score="normalized"：正規化後スコアでゲーティング判定
     # SPEC_gate_score_normalized: 35/Multi Query/Gate Score/Post-Normalization
-    if gate_score == "normalized" and gate_mode is not None:
+    if gate_score == "normalized" and gate_mode is not None and groups[0]:
         norm_scores = [r["score"] for r in groups[0]]
         g_top1_val = norm_scores[0]
         g_margin_val = norm_scores[0] - norm_scores[1] if len(norm_scores) > 1 else norm_scores[0]

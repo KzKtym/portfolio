@@ -1,12 +1,14 @@
 import json
+import logging
 from pathlib import Path
 
 import urllib.request
 import urllib.error
 
-from django.conf import settings
+from decouple import config
 
-_CONFIG_PATH = Path(settings.BASE_DIR) / "app" / "rag_tr_tool" / "config.json"
+logger = logging.getLogger(__name__)
+
 _API_URL = "https://api.openai.com/v1/chat/completions"
 _MODEL = "gpt-4.1-mini"
 
@@ -18,10 +20,9 @@ _PROMPT_MULTI = Path(__file__).parent / "prompt_multi.txt"
 
 
 def _get_api_key() -> str:
-    config = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
-    key = config.get("openai_api_key", "")
+    key = config("OPENAI_API_KEY", default="")
     if not key:
-        raise ValueError("openai_api_key が config.json に設定されていません")
+        raise ValueError("OPENAI_API_KEY が .env に設定されていません")
     return key
 
 
@@ -60,7 +61,7 @@ def rewrite_query(query: str) -> str:
         prompt = _load_prompt(_PROMPT_REWRITE, query)
         return _call_api(prompt, api_key)
     except Exception as e:
-        print(f"[query_rewriter] rewrite failed, fallback to original. error: {e}")
+        logger.warning("rewrite failed, fallback to original. error: %s", e)
         return query
 
 
@@ -85,5 +86,5 @@ def generate_queries(query: str) -> list[str]:
                 queries.append(line)
         return queries
     except Exception as e:
-        print(f"[query_rewriter] generate_queries failed, fallback to empty. error: {e}")
+        logger.warning("generate_queries failed, fallback to empty. error: %s", e)
         return []

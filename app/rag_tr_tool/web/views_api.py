@@ -2,8 +2,9 @@
 import json
 from django.http import JsonResponse, FileResponse, HttpResponse, Http404
 
-from .models import Experiment
+from ..models import Experiment
 from . import services
+from app.rag_tr_tool.core.evaluation import normalize_query_option
 from app.rag_tr_tool.utils.log_formatter import format_log_form1, format_log_form2, read_details_json, get_logs_dir
 from app.rag_tr_tool.utils.rewrite_store import read_rwa_json
 
@@ -82,9 +83,8 @@ def rwa_view(request):
     def _get_exp_info(exp_id):
         try:
             exp = Experiment.objects.get(id=exp_id)
-            qr = exp.parameters.get("query_rewrite", False)
-            if isinstance(qr, str):
-                qr = qr.lower() == "true"
+            # 保存されるキーは query_option（rewrite / multi のとき RWA データが生成される）
+            qr = normalize_query_option(exp.parameters.get("query_option")) is not None
             return {"id": exp_id, "qr": qr, "qr_label": str(qr).lower(), "project_id": exp.project_id}
         except Experiment.DoesNotExist:
             return {"id": exp_id, "qr": False, "qr_label": "?", "project_id": 1}

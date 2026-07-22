@@ -1,10 +1,11 @@
 import json
 from pathlib import Path
+from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.conf import settings
 from . import services
-from .models import Experiment, RagProject
+from ..models import Experiment, RagProject
 
 _PJ_BASE_DIR = Path(settings.BASE_DIR) / "data" / "rag_tr_tool"
 
@@ -94,6 +95,13 @@ def run_experiment(request, project_id):
     name = request.POST.get("name")
     rebuild = request.POST.get("rebuild_index") == "1"
     data = services.run_experiment_service(name, raw_dict, rebuild, project_id)
+    if not data.get("ok"):
+        # 失敗時は実験レコードを作らないため、結果画面ではなく入力画面へ戻す
+        messages.error(
+            request,
+            f"実験の実行に失敗しました（{data.get('error_type', 'Unknown')}）: {data.get('error', '')}",
+        )
+        return redirect("new_experiment", project_id=project_id)
     return render(request, "rag_tr_tool/result.html", data)
 
 

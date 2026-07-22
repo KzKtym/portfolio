@@ -1,21 +1,18 @@
 import json
-from pathlib import Path
 
 import urllib.request
 import urllib.error
 
-from django.conf import settings
+from decouple import config
 
-_CONFIG_PATH = Path(settings.BASE_DIR) / "app" / "rag_tr_tool" / "config.json"
 _API_URL = "https://api.openai.com/v1/chat/completions"
 _MODEL = "gpt-4.1-mini"
 
 
 def _get_api_key() -> str:
-    config = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
-    key = config.get("openai_api_key", "")
+    key = config("OPENAI_API_KEY", default="")
     if not key:
-        raise ValueError("openai_api_key が config.json に設定されていません")
+        raise ValueError("OPENAI_API_KEY が .env に設定されていません")
     return key
 
 

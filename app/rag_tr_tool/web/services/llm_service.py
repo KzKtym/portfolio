@@ -1,5 +1,5 @@
 """llm_service.py - LLM回答生成（generate_answers）"""
-from ..models import Experiment
+from ...models import Experiment
 from app.rag_tr_tool.core.evaluation import EvalParams, merge_results, merge_by_score, is_gated
 from app.rag_tr_tool.core.indexing.index_builder import build_index
 from app.rag_tr_tool.core.retrieval.retriever import Retriever
@@ -38,23 +38,32 @@ def generate_answers_service(exp_id: int) -> dict:
     answers = []
 
     for query in queries:
-        if p.query_rewrite == "true":
+        if p.query_option == "rewrite":
             rewritten = rewrite_query(query)
             results = merge_results(_search(query), _search(rewritten), p.top_k)
-        elif p.query_rewrite == "multi":
+        elif p.query_option == "multi":
             results_original = _search(query)
-            gated, _, _ = is_gated(results_original, p.gate_mode, p.gate_top1, p.gate_margin)
+            # gate_score="raw" のときのみ事前ゲーティング判定（runner.py と同じ扱い）
+            if p.gate_score == "raw":
+                gated, _, _ = is_gated(results_original, p.gate_mode, p.gate_top1, p.gate_margin)
+            else:
+                gated = False
             if gated:
                 results = results_original
             else:
                 generated = generate_queries(query)
                 all_results = [results_original] + [_search(q) for q in generated]
-                results = merge_by_score(
+                # merge_by_score の戻り値は (merged, gated, g_top1, g_margin) の4要素
+                results, gated, _, _ = merge_by_score(
                     all_results, p.top_k,
                     original_boost=p.original_boost,
                     boost_threshold=p.boost_threshold,
                     merge_mode=p.merge_mode,
                     normalize=p.normalize,
+                    gate_score=p.gate_score,
+                    gate_mode=p.gate_mode,
+                    gate_top1=p.gate_top1,
+                    gate_margin=p.gate_margin,
                 )
         else:
             results = _search(query)

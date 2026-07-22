@@ -1,18 +1,14 @@
-# RAG実験ツール テスト仕様（検討中）
+# RAG実験ツール テスト検討 ⇒ 仕様確定
+
+※確定仕様 ⇒ [***8. 作成したテストコード（最終）***](#8-作成したテストコード最終)
 
 ## 概要
 テストコード生成にあたり、トークン節約のため、当初 CLIでRAG構築を進めていたcore部分は、実行そのものがテストに相当する印象があり、テストコードを省略できないかをまず検証した上で、全体のテスト方針を検討させた。
 
-実行モデル： Claude Opus4.8
-
----
-（以下、Claude 回答）
-
-約2,900行、全58ファイル。まず web 層から読みます。重要な不整合を見つけました。
-core と web の境界を確認するため、runner と残りを読みます。core と web を全て読み終えました。
-ご想定を検証するため、境界部分を機械的にチェックします。
-core は Django 非依存のモジュールがあるので、実際に動かして挙動を確認します。
-全ソースを読み、境界部分は静的解析と実行で検証しました。**結論から言うと、「core は実験実行でデバッグできる」は半分正しく、半分は成立しません。** 根拠を示します。
+Claude Opus4.8 で検証結果
+~~~
+約2,900行、全58ファイル。まず web 層から読みます。重要な不整合を見つけました。core と web の境界を確認するため、runner と残りを読みます。core と web を全て読み終えました。ご想定を検証するため、境界部分を機械的にチェックします。core は Django 非依存のモジュールがあるので、実際に動かして挙動を確認します。全ソースを読み、境界部分は静的解析と実行で検証しました。**結論から言うと、「core は実験実行でデバッグできる」は半分正しく、半分は成立しません。** 根拠を示します。
+~~~
 
 ---
 
@@ -100,8 +96,11 @@ llm_service が EvalParams に要求する属性:
 **A・B・C はいずれも「実験を回す」経路では踏まれません。** 実験実行（`run_experiment`）は `runner.py` を通り、そちらは正しく書けています。壊れているのは **`generate_answers` / `compare` / `rwa` という、実験実行とは別のボタン**です。つまり **「core は実験で叩ける」は正しいが、その実験経路がカバーしないコードが web 層に確実に存在する**、という構図です。
 
 ## 5. 🔴 別件・要即対応バグ検出：
-（略）
-　対応済み
+
+- config.json で OpenAI API キーを指定する方式にしている。
+- 他アプリと同じく `python-decouple` の `config('OPENAI_API_KEY')` へ移し、`config.json` からは削除
+
+~~テスト方針とは独立に、先に処理すべき事項として挙げます。~~  `⇒`対応済み(7/20)
 
 ---
 
@@ -128,7 +127,7 @@ llm_service が EvalParams に要求する属性:
 | モジュール | テスト対象 | 優先度 |
 |---|---|---|
 | `evaluation/metrics.py` | `reciprocal_rank` / `recall_at_k`（hit無し、rank=1、k境界、重複source） | **最高** |
-| `evaluation/query_logic.py` | `is_gated`（4 gate_mode × 境界値、**結果0件→IndexError**）、`merge_results`（重複source優先、rank振り直し、top_k切り詰め）、`merge_by_score`（minmax正規化、全同値→denom=1.0、weighted 0.8、original_boost、normalized gate） | **最高** |
+| `evaluation/query_logic.py` | `is_gated`（4 gate_mode × 境界値、~~**結果0件→IndexError**~~ ⇒ 修正(7/20)）、`merge_results`（重複source優先、rank振り直し、top_k切り詰め）、`merge_by_score`（minmax正規化、全同値→denom=1.0、weighted 0.8、original_boost、normalized gate） | **最高** |
 | `evaluation/params.py` | `normalize`（クォート除去、`"5"`→int、`"0.5"`→float、`5.0`→5、非数値素通し）、`from_dict`（gate_mode 自動推論の4分岐、`skip_no_answer` 文字列判定、`reranker` の falsy→None） | **最高** |
 | `chunking/markdown_chunker.py` | 上記【1】〜【4】+ `extract_sections` の階層スタック | 高 |
 | `retrieval/retriever.py` | **store/embedder はフェイクを注入すれば faiss 不要**。`_search_similarity`（idx=-1除去）、`_search_hybrid` の**RRF 計算**、`_search_bm25`、`query: ` プレフィクス付与、BM25フォールバック計数 | 高 |
@@ -147,12 +146,64 @@ llm_service が EvalParams に要求する属性:
 ---
 
 ## 7. 方針を固めるための確認事項
+文中 `⇒` で回答
 
-1. **層Cの線引き**：上表の5モジュールをテスト対象外とする案でよいですか。`vectorstore/faiss_store.py` は faiss さえ入っていれば軽量に往復テストできますが、含めますか。
+1. **層Cの線引き**：上表の5モジュールをテスト対象外とする。
+案でよいですか。`vectorstore/faiss_store.py` は faiss さえ入っていれば軽量に往復テストできますが、含めますか。
+
+   ⇒ faissは含める。他は対象外でOK
+
 2. **発見済みバグ4件+3件の扱い**：前回同様「`@unittest.skip` + TODO で現状固定せず明示」でよいですか。特に **A・B（`generate_answers` が全実験で確実に落ちる）は先に本体修正を提案します** — テストを skip で寝かせるより直す方が早い規模です（`p.query_rewrite`→`p.query_option`、戻り値4要素受け）。
+
+   ⇒ ~~修正する。~~ `⇒`対応済み(7/20)
+
 3. **`run_evaluation` の包括 try/except と `"実行完了（保存OK）"`**：第1節の問題。テストで「現状（エラーでも mrr=0.0 で保存）」を固定しますか、それとも本体の設計課題として TODO 化しますか。**私見では、これはテストより先に直す価値がある最優先事項**です。
+
+   ⇒ ~~先に修正~~ `⇒`対応済み(7/20)
+
 4. **`chunking/splitter.py`**：どこからも import されていないデッドコードに見えます（`split_text_fixed` は `overlap >= chunk_size` で**無限ループ**します）。テスト対象に含めますか、削除候補として扱いますか。
+
+   ⇒ ~~削除する。~~ `⇒`対応済み(7/20)
+
 5. **配置**：`web/tests.py` 1ファイルに集約しますか、それとも `core/tests.py`・`utils/tests.py` を新設して3層を分けますか（Django のテストランナーはアプリラベル単位なので、`app.rag_tr_tool.web` 配下に `tests/` パッケージ化するのが現実的です）。
+
+   ⇒ ３層に分ける。ただし `app.rag_tr_tool` 配下で（app/rag_tr_tool/tests/）。これを実現するためリファクタ必要（詳細は次項参照）
+   `⇒`対応済み(7/20)
+
 6. **依存**：層Bのテストは faiss / sentence-transformers / langchain の import を避けられますが、`retriever.py` は `numpy` を、`langchain_chunker.py` は `langchain_text_splitters` を import 時に要求します。テスト環境にこれらは入っていますか。
+
+   ⇒ はい
+
+---
+
+## 8. 作成したテストコード（最終）
+
+3層方針に沿って、core が7モジュール群に分かれるため関心ごとにファイルを分割した。計 **310テスト**。
+
+| ファイル | 件数 | 対象（層） |
+|---|---|---|
+| `test_core_evaluation.py` | 62 | metrics / query_logic / params（層B） |
+| `test_core_chunking.py` | 29 | markdown_chunker（層B） |
+| `test_core_indexing.py` | 38 | index_builder / loader / prompt_template / faiss_store（層B） |
+| `test_core_retrieval.py` | 43 | retriever / reranker / openai_client / query_rewriter（層B） |
+| `test_core_runner.py` | 26 | runner の分岐（層B） |
+| `test_utils.py` | 47 | log_formatter / rewrite_store / answers_store / spec_extractor（層B） |
+| `test_web.py` | 65 | views / views_api / services / context_processors（層A） |
+
+- 配置は既存アプリの慣習に合わせ **`app/rag_tr_tool/tests/`** パッケージ。
+- これを実現するため **app label を変更**した（7-5 ★のリファクタ）。`web/apps.py` の
+  `name = 'app.rag_tr_tool.web'` を `app/rag_tr_tool/apps.py` の `name = 'app.rag_tr_tool'` へ昇格し、
+  `models.py` / `migrations/` も同階層へ移動。ラベルが `web` → `rag_tr_tool` になり、テストを
+  アプリ直下に置けるようにした（`db_table` 明示済みのため物理テーブル名は不変）。
+- 修正済みの不具合（第1〜4節）は回帰テストとして固定。faiss は導入済みのため `faiss_store` は
+  層Bに含め、実インデックスの往復テストとした（第7節1の判断）。
+
+**実行:**
+
+```bash
+pipenv run python manage.py test app.rag_tr_tool --settings=config.settings_test
+```
+
+（アプリラベルではなくドット付きモジュールパスで指定する。`--settings=config.settings_test` は必須。）
 
 以上

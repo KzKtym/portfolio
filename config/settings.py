@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'app.home.apps.HomeConfig',
     'app.skill_sheet.apps.SkillSheetConfig',
     "app.download",
-    "app.rag_tr_tool.web",
+    "app.rag_tr_tool",
     "app.work_shift.apps.WorkShiftConfig",
 ]
 
@@ -181,6 +181,11 @@ LOGGING = {
         'accounts': {
             'handlers': ['console'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'app.rag_tr_tool': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

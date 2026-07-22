@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 from django.conf import settings
 
-from ..models import Experiment, RagProject
+from ...models import Experiment, RagProject
 from app.rag_tr_tool.core.evaluation import EvalParams
 from app.rag_tr_tool.core.indexing.index_builder import get_index_info
 from app.rag_tr_tool.utils.spec_extractor import resolve_spec

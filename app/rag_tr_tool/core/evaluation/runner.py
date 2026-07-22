@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from .metrics import reciprocal_rank, recall_at_k
 from .query_logic import is_gated, merge_results, merge_by_score
 from .params import EvalParams
 from app.rag_tr_tool.utils.log_formatter import get_logs_dir
+
+logger = logging.getLogger(__name__)
 
 _DATA_DIR = Path(settings.BASE_DIR) / "data" / "rag_tr_tool"
 
@@ -42,7 +45,7 @@ def run_evaluation(params: dict, rebuild: bool = False, project_id: int = 1) -> 
     try:
         store, embedder, index_creation_time = build_index(params, rebuild=rebuild, project_id=project_id)
         total_chunks = store.index.ntotal
-        print("TOTAL CHUNKS:", total_chunks)
+        logger.debug("total chunks: %s", total_chunks)
 
         retriever = Retriever(store, embedder)
 
@@ -53,7 +56,7 @@ def run_evaluation(params: dict, rebuild: bool = False, project_id: int = 1) -> 
             reranker = CrossEncoderReranker()
             # reranker + candidate_k 同時指定の警告
             if p.candidate_k is not None:
-                print("[Runner] WARNING: reranker と candidate_k が同時指定されています。rerank_k を優先し candidate_k は無視します。")
+                logger.warning("reranker と candidate_k が同時指定されています。rerank_k を優先し candidate_k は無視します。")
 
         if p.query_option == "rewrite":
             # SPEC_rewrite: 35/Query Rewrite/original+rewrite 2系統検索→rankベースmerge→top_k絞り込み
@@ -235,8 +238,10 @@ def run_evaluation(params: dict, rebuild: bool = False, project_id: int = 1) -> 
         # BM25フォールバック発生時のみWARNINGを1行出力
         if retriever._bm25_fallback_count > 0:
             indices_str = ", ".join(str(i) for i in retriever._bm25_fallback_query_indices)
-            print(f"[Retriever] WARNING: BM25 not available, fell back to similarity search. "
-                  f"count={retriever._bm25_fallback_count}/{n}, query_no=[{indices_str}]")
+            logger.warning(
+                "BM25 not available, fell back to similarity search. count=%s/%s, query_no=[%s]",
+                retriever._bm25_fallback_count, n, indices_str,
+            )
 
         chunk_lengths = [len(t) for t in store.texts] if store.texts else []
         chunk_stats = {
@@ -261,10 +266,16 @@ def run_evaluation(params: dict, rebuild: bool = False, project_id: int = 1) -> 
         }
 
     except Exception as e:
+        # 呼び出し側は status を必ず判定すること。
+        # 例外を dict に畳むとトレースバックが失われるため、ここで必ずログに残す。
         elapsed = time.time() - start
+        logger.exception(
+            "run_evaluation failed (project_id=%s, params=%s)", project_id, params
+        )
         return {
             "status": "error",
             "error": str(e),
+            "error_type": type(e).__name__,
             "meta": {
                 "evaluation_time_sec": round(elapsed, 2),
                 "query_count": 0,

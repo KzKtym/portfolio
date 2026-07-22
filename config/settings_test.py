@@ -37,3 +37,37 @@ STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
+
+
+# ---------------------------------------------------------------------------
+# ログ: 異常系テストが出力するトレースバック・WARNING を抑制する。
+#
+# エラー経路のテストは意図的に例外や 404/405 を発生させるため、既定のままだと
+# 成功時でも大量のトレースバックが流れ、成否の判別が困難になる。
+# ログ出力そのものを検証するテストは assertLogs を使うため、この抑制の影響を受けない。
+# ---------------------------------------------------------------------------
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'null': {'class': 'logging.NullHandler'},
+    },
+    'root': {
+        'handlers': ['null'],
+        'level': 'CRITICAL',
+    },
+    'loggers': {
+        # 404 / 405 / 502 を返すことを検証するテストの WARNING・ERROR
+        'django.request': {
+            'handlers': ['null'],
+            'level': 'CRITICAL',
+            'propagate': False,
+        },
+        # 例外がログに残ることを検証するテストのトレースバック
+        'app': {
+            'handlers': ['null'],
+            'level': 'CRITICAL',
+            'propagate': False,
+        },
+    },
+}

@@ -2,7 +2,7 @@
 import json
 from urllib.parse import quote
 
-from ..models import Experiment
+from ...models import Experiment
 from app.rag_tr_tool.core.evaluation import run_evaluation, save_log, save_details_json, EvalParams
 from app.rag_tr_tool.utils.spec_extractor import resolve_spec
 from app.rag_tr_tool.utils.log_formatter import format_log_full
@@ -12,8 +12,14 @@ from app.rag_tr_tool.utils.rewrite_store import save_rwa_json, calc_rewrite_data
 def run_experiment_service(name: str, raw_dict: dict, rebuild: bool, project_id: int) -> dict:
     """実験を実行し、DB保存・ログ保存・rewriteデータ保存を行い結果dictを返す。
 
+    評価が失敗した場合は Experiment を作成せず、``{"ok": False, "error": ...}`` を返す。
+    失敗を mrr=0.0 の実験として保存すると、「検索精度が低い」結果と区別できなくなり、
+    比較画面に誤ったデータが蓄積するため。
+
     Returns:
-        {
+        失敗時: {"ok": False, "error": str, "error_type": str}
+        成功時: {
+            "ok": True,
             "exp": Experiment,
             "exp_params_urlenc": str,
             "exp_params_json": str,
@@ -31,6 +37,14 @@ def run_experiment_service(name: str, raw_dict: dict, rebuild: bool, project_id:
     """
     normalized_params = EvalParams.normalize(raw_dict)
     result = run_evaluation(normalized_params, rebuild=rebuild, project_id=project_id)
+
+    if result.get("status") != "success":
+        return {
+            "ok": False,
+            "error": result.get("error", "不明なエラー"),
+            "error_type": result.get("error_type", "Unknown"),
+        }
+
     spec_text = resolve_spec(normalized_params)
 
     metrics = result.get("metrics", {})
@@ -49,20 +63,19 @@ def run_experiment_service(name: str, raw_dict: dict, rebuild: bool, project_id:
         .first()
     )
 
+    # ここに到達するのは status == "success" のときのみ
     meta = result.get("meta", {})
-    has_log = result.get("status") == "success"
-    if has_log:
-        log_text = format_log_full(
-            details=result.get("details", []),
-            total_chunks=meta.get("total_chunks", 0),
-            index_creation_time=meta.get("index_creation_time"),
-            evaluation_time_sec=meta.get("evaluation_time_sec", 0),
-            query_count=meta.get("query_count", 0),
-            mrr=metrics.get("mrr", 0.0),
-            recall_at_5=metrics.get("recall_at_5", 0.0),
-        )
-        save_log(current_exp.id, log_text, project_id=project_id)
-        save_details_json(current_exp.id, result.get("details", []), meta, project_id=project_id)
+    log_text = format_log_full(
+        details=result.get("details", []),
+        total_chunks=meta.get("total_chunks", 0),
+        index_creation_time=meta.get("index_creation_time"),
+        evaluation_time_sec=meta.get("evaluation_time_sec", 0),
+        query_count=meta.get("query_count", 0),
+        mrr=metrics.get("mrr", 0.0),
+        recall_at_5=metrics.get("recall_at_5", 0.0),
+    )
+    save_log(current_exp.id, log_text, project_id=project_id)
+    save_details_json(current_exp.id, result.get("details", []), meta, project_id=project_id)
 
     rwa_queries = result.get("rwa_queries", [])
     if rwa_queries:
@@ -74,6 +87,7 @@ def run_experiment_service(name: str, raw_dict: dict, rebuild: bool, project_id:
         rewrite_data, rewrite_summary = calc_rewrite_data(rewrite_data)
 
     return {
+        "ok": True,
         "exp": current_exp,
         "exp_params_urlenc": quote(json.dumps(current_exp.parameters, ensure_ascii=False)),
         "exp_params_json": json.dumps(current_exp.parameters, ensure_ascii=False),
@@ -81,7 +95,7 @@ def run_experiment_service(name: str, raw_dict: dict, rebuild: bool, project_id:
         "message": "実行完了（保存OK）",
         "details": result.get("details", []),
         "meta": meta,
-        "has_log": has_log,
+        "has_log": True,
         "answers": [],
         "has_answers": False,
         "rewrite_data": rewrite_data,
