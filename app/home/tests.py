@@ -1,12 +1,15 @@
 import json
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 from unittest import mock
 
+from accounts.models import LoginHistory
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .decorators import no_cache_no_index
 
@@ -135,6 +138,53 @@ class HomeViewContextTest(TestCase):
             self.client.get(self.url)
 
         self.assertTrue(any("ホームページアクセス: testuser" in line for line in cm.output))
+
+
+class HomePreviousLoginTest(TestCase):
+    """「最終ログイン」に前回ログイン日時が出ることのテスト"""
+
+    def setUp(self):
+        self.user = _make_user()
+        self.client.force_login(self.user)
+        # force_login は user_logged_in を発火し履歴を1件作る。各テストが
+        # 履歴を明示的に組み立てられるよう、ここで消してまっさらにする。
+        LoginHistory.objects.all().delete()
+        self.url = reverse("home:home")
+
+    def test_context_has_previous_login_key(self):
+        """previous_login が context に必ず入る"""
+        response = self.client.get(self.url)
+
+        self.assertIn("previous_login", response.context)
+
+    def test_none_when_only_current_login(self):
+        """履歴が今回分の1件だけなら previous_login は None"""
+        LoginHistory.objects.create(user=self.user, logged_in_at=timezone.now())
+
+        response = self.client.get(self.url)
+
+        self.assertIsNone(response.context["previous_login"])
+
+    def test_shows_second_latest_not_current(self):
+        """直近ではなく2番目に新しい（＝前回）ログイン日時を出す"""
+        now = timezone.now()
+        previous = now - timedelta(days=1)
+        LoginHistory.objects.create(user=self.user, logged_in_at=previous)   # 前回
+        LoginHistory.objects.create(user=self.user, logged_in_at=now)        # 今回
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context["previous_login"], previous)
+
+    def test_other_users_history_is_ignored(self):
+        """別ユーザーの履歴は混ざらない"""
+        other = _make_user(username="other")
+        LoginHistory.objects.create(user=other, logged_in_at=timezone.now())
+        LoginHistory.objects.create(user=self.user, logged_in_at=timezone.now())
+
+        response = self.client.get(self.url)
+
+        self.assertIsNone(response.context["previous_login"])
 
 
 class HomeViewServicesJsonTest(TestCase):

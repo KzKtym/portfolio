@@ -20,7 +20,7 @@
     <div class="dashboard-stats">
         <div class="stat-card">
             <span class="stat-label">アカウント：</span>{{ user.username }} （{% if user.is_superuser %}管理者{% else %}一般ユーザー{% endif %}）
-            <span class="stat-label">最終ログイン：</span>{{ user.last_login|date:"Y年n月j日 H:i" }}
+            <span class="stat-label">最終ログイン：</span>{% if previous_login %}{{ previous_login|date:"Y年n月j日 H:i" }}{% else %}（今回が初めてのログインです）{% endif %}
         </div>
     </div>
 </div>

@@ -1,8 +1,13 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import AnonymousUser, User
+from django.core.management import call_command
 from django.test import RequestFactory, SimpleTestCase, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .middleware import get_client_ip
+from .models import LoginHistory
 from .views import is_superuser, signup_permission_denied
 
 
@@ -355,3 +360,89 @@ class AuthSignalLogTest(TestCase):
             self.client.post(reverse("accounts:logout"))
 
         self.assertTrue(any("ログアウト: testuser" in line for line in cm.output))
+
+
+class LoginHistoryRecordTest(TestCase):
+    """ログイン成功時に LoginHistory が記録されることのテスト"""
+
+    def setUp(self):
+        self.user = _make_user()
+        self.login_url = reverse("accounts:login")
+
+    def _login(self, **extra):
+        return self.client.post(
+            self.login_url,
+            {"username": "testuser", "password": "test-pass-1234"},
+            **extra,
+        )
+
+    def test_login_creates_history_row(self):
+        """ログイン成功で履歴が1件作られ、ユーザーが紐づく"""
+        self._login()
+
+        self.assertEqual(LoginHistory.objects.filter(user=self.user).count(), 1)
+
+    def test_history_stores_ip_address(self):
+        """REMOTE_ADDR が IPアドレスとして保存される"""
+        self._login(REMOTE_ADDR="198.51.100.7")
+
+        history = LoginHistory.objects.get(user=self.user)
+        self.assertEqual(history.ip_address, "198.51.100.7")
+
+    def test_history_uses_forwarded_ip(self):
+        """X-Forwarded-For の先頭を優先して保存する"""
+        self._login(HTTP_X_FORWARDED_FOR="203.0.113.9, 10.0.0.2", REMOTE_ADDR="10.0.0.2")
+
+        history = LoginHistory.objects.get(user=self.user)
+        self.assertEqual(history.ip_address, "203.0.113.9")
+
+    def test_failed_login_creates_no_history(self):
+        """ログイン失敗では履歴を作らない"""
+        self.client.post(
+            self.login_url,
+            {"username": "testuser", "password": "wrong-password"},
+        )
+
+        self.assertEqual(LoginHistory.objects.count(), 0)
+
+    def test_multiple_logins_accumulate(self):
+        """ログインの度に履歴が積み上がる"""
+        self._login()
+        self.client.post(reverse("accounts:logout"))
+        self._login()
+
+        self.assertEqual(LoginHistory.objects.filter(user=self.user).count(), 2)
+
+
+class PruneLoginHistoryCommandTest(TestCase):
+    """prune_login_history 管理コマンドのテスト"""
+
+    def setUp(self):
+        self.user = _make_user()
+        now = timezone.now()
+        # 100日前（削除対象）と 10日前（保持）を1件ずつ用意する
+        self.old = LoginHistory.objects.create(
+            user=self.user, logged_in_at=now - timedelta(days=100)
+        )
+        self.recent = LoginHistory.objects.create(
+            user=self.user, logged_in_at=now - timedelta(days=10)
+        )
+
+    def test_default_prunes_older_than_90_days(self):
+        """既定 90日より前のみ削除される"""
+        call_command("prune_login_history")
+
+        remaining = list(LoginHistory.objects.all())
+        self.assertEqual(remaining, [self.recent])
+
+    def test_days_option_controls_cutoff(self):
+        """--days で保持期間を変えられる（5日なら両方削除）"""
+        call_command("prune_login_history", "--days", "5")
+
+        self.assertEqual(LoginHistory.objects.count(), 0)
+
+    def test_dry_run_deletes_nothing(self):
+        """--dry-run は削除しない"""
+        call_command("prune_login_history", "--dry-run")
+
+        self.assertEqual(LoginHistory.objects.count(), 2)

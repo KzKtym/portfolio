@@ -12,6 +12,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import TemplateView
 from django.utils import timezone
 
+from accounts.models import LoginHistory
 from .decorators import no_cache_no_index
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,16 @@ class HomeView(LoginRequiredMixin, TemplateView):
         # ユーザー情報
         context['user'] = self.request.user
         context['current_time'] = timezone.now()
+
+        # 「最終ログイン」は今回のログインではなく、その1つ前のログイン日時を出す。
+        # user.last_login はログインの度に現在時刻へ更新され「今」になってしまうため、
+        # LoginHistory の直近2件を取り、2件目（＝前回）の日時を採用する。
+        recent = list(
+            LoginHistory.objects
+            .filter(user=self.request.user)
+            .order_by('-logged_in_at', '-id')[:2]
+        )
+        context['previous_login'] = recent[1].logged_in_at if len(recent) > 1 else None
 
         # サービス一覧を JSON から読み込む
         try:
