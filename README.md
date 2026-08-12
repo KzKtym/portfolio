@@ -96,7 +96,10 @@ pipenv run python manage.py test accounts app.home app.skill_sheet app.download 
 
   | 文書 | 対象 |
   | --- | --- |
+  | [Home_SPEC.md](./docs/Home_SPEC.md) | サービスTOP・サービス管理画面の仕様 |
+  | [Home_AUTH_SPEC.md](./docs/Home_AUTH_SPEC.md) | ログイン方式（失敗ロック、商談用アクセス）の横断仕様 |
   | [SkillSheet_SPEC.md](./docs/SkillSheet_SPEC.md) | Skill Sheet の画面・検索仕様 |
+  | [SkillSheet_CELL_SYNC_SPEC.md](./docs/SkillSheet_CELL_SYNC_SPEC.md) | Skill Sheet のセル同期API仕様（スプレッドシート連携） |
   | [Download_SPEC.md](./docs/Download_SPEC.md) | Download App のAPI・権限モデル |
   | [WorkShift_SPEC.md](./docs/WorkShift_SPEC.md) | Work Shift の設計判断の記録（採用しなかった案とその理由を含む） |
   | [rag_tr_tool/](./docs/rag_tr_tool/) | RAG実験管理ツールの仕様・テスト計画・引き継ぎメモ |

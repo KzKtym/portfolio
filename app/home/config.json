@@ -23,7 +23,7 @@
   {
     "name": "シフト作成（デモ版）",
     "status": "on",
-    "description": "TypeScript + Vue、FastAPI + Django 構成の技術検証用。介護職員向けシフト作成Pocです。",
+    "description": "TypeScript + Vue、FastAPI + Django 構成の技術検証用。介護職員向けシフト作成PoCです。",
     "url_name": "work_shift:spa",
     "button_label": "Work Shift"
   }
