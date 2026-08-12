@@ -7,5 +7,6 @@
         "5": "■結合テスト",
         "6": "■総合テスト",
         "7": "■保守・運用"
-    }
+    },
+    "api_password": "env:SKILL_SHEET_API_PASSWORD"
 }

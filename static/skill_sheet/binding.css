@@ -1,0 +1,282 @@
+/* セル同期定義の管理画面 */
+
+body {
+    margin: 0;
+    background-color: #f5f6f8;
+    color: #333;
+    font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    font-size: 14px;
+}
+
+.binding-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.binding-form-container {
+    max-width: 760px;
+}
+
+.binding-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 2px solid #d8dbe0;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+}
+
+.binding-header h1 {
+    font-size: 20px;
+    margin: 0;
+}
+
+.binding-header-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* ボタン */
+.btn {
+    display: inline-block;
+    padding: 6px 14px;
+    border: 1px solid #b9bec7;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #333;
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+    line-height: 1.6;
+}
+
+.btn:hover {
+    background-color: #eef0f3;
+}
+
+.btn-primary {
+    background-color: #3a6ea5;
+    border-color: #3a6ea5;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #315c8a;
+}
+
+.flash {
+    background-color: #e6f4ea;
+    border: 1px solid #a8d5b5;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin: 0 0 16px;
+}
+
+/* 一覧 */
+.binding-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border: 1px solid #d8dbe0;
+}
+
+.binding-table th,
+.binding-table td {
+    border-bottom: 1px solid #e4e6ea;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.binding-table th {
+    background-color: #eef0f3;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.binding-table tbody tr:hover {
+    background-color: #f7f9fb;
+}
+
+.binding-table code {
+    background-color: #f1f3f5;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.binding-table .target {
+    color: #555;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.binding-table .center {
+    text-align: center;
+}
+
+.binding-table .description {
+    color: #666;
+    font-size: 13px;
+}
+
+.binding-table .empty {
+    text-align: center;
+    color: #888;
+    padding: 24px;
+}
+
+.note {
+    color: #666;
+    font-size: 13px;
+    margin: 10px 0 0;
+}
+
+.note code {
+    background-color: #f1f3f5;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+/* 設定サンプル */
+.sample-section {
+    margin-top: 36px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.section-header h2 {
+    font-size: 16px;
+    margin: 0;
+}
+
+#sample-config {
+    background-color: #23272e;
+    color: #e6e6e6;
+    padding: 16px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-top: 10px;
+}
+
+/* フォーム */
+fieldset {
+    border: 1px solid #d8dbe0;
+    border-radius: 4px;
+    background-color: #fff;
+    padding: 16px 20px 20px;
+    margin: 0 0 20px;
+}
+
+legend {
+    font-weight: 600;
+    padding: 0 6px;
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+.form-row:last-child {
+    border-bottom: none;
+}
+
+.form-row > label {
+    width: 150px;
+    flex-shrink: 0;
+    padding-top: 6px;
+    font-weight: 600;
+}
+
+.form-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.form-input input[type="text"],
+.form-input input[type="number"],
+.form-input select,
+.form-input textarea {
+    width: 100%;
+    max-width: 420px;
+    padding: 6px 8px;
+    border: 1px solid #b9bec7;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.form-input input[type="number"] {
+    max-width: 160px;
+}
+
+.form-input input[type="checkbox"] {
+    width: auto;
+    transform: scale(1.2);
+    margin-top: 6px;
+}
+
+.required {
+    color: #c0392b;
+}
+
+.help {
+    color: #666;
+    font-size: 12px;
+    margin: 4px 0 0;
+}
+
+.error {
+    color: #c0392b;
+    font-size: 13px;
+    margin: 4px 0 0;
+}
+
+.form-errors {
+    background-color: #fdecea;
+    border: 1px solid #f0b4ae;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+}
+
+.form-errors p {
+    margin: 4px 0;
+    color: #a03127;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+@media (max-width: 700px) {
+    .form-row {
+        display: block;
+    }
+
+    .form-row > label {
+        width: auto;
+        display: block;
+        padding-top: 0;
+        margin-bottom: 4px;
+    }
+
+    .binding-table .target {
+        white-space: normal;
+    }
+}

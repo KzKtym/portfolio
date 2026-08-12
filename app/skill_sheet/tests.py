@@ -1,10 +1,17 @@
+import json
+import os
 import unittest
 from unittest import mock
 
+from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from .models import PersonalInfo, SkillSheetData
+from .models import BindingConfigError, CellBinding, PersonalInfo, SkillSheetData
+from django.contrib.auth.models import User
+
+from .forms import CellBindingForm, field_choices_by_model, model_choices
+from .utils import load_config, resolve_secret
 
 
 def _make_personal(registration_no="R001", age=40, gender="M", **kwargs):
@@ -537,3 +544,840 @@ class DetailConfigJsonTest(TestCase):
             response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 200)
+
+
+# ═══════════════════════════════════════════════════════════════
+# セル同期: CellBinding モデル
+# ═══════════════════════════════════════════════════════════════
+
+API_PASSWORD = "test-api-password"
+
+
+def _make_binding(name="personal_age", label="年齢", field_name="age",
+                  record_id=1, writable=True, model_label="skill_sheet.PersonalInfo",
+                  **kwargs):
+    return CellBinding.objects.create(
+        name=name, label=label, model_label=model_label,
+        field_name=field_name, record_id=record_id, writable=writable, **kwargs
+    )
+
+
+class CellBindingModelTest(TestCase):
+    """CellBinding の解決と読み書き"""
+
+    def setUp(self):
+        self.personal = _make_personal(age=40, self_pr="元の自己PR")
+
+    def test_str_shows_name_and_label(self):
+        """__str__ は '名称（表示名）'"""
+        binding = _make_binding(record_id=self.personal.pk)
+
+        self.assertEqual(str(binding), "personal_age（年齢）")
+
+    def test_read_value(self):
+        """read_value は対象レコードの値を返す"""
+        binding = _make_binding(name="p_self_pr", field_name="self_pr",
+                                record_id=self.personal.pk)
+
+        self.assertEqual(binding.read_value(), "元の自己PR")
+
+    def test_write_value_updates_db(self):
+        """write_value は対象レコードを更新する"""
+        binding = _make_binding(record_id=self.personal.pk)
+
+        binding.write_value(45)
+
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 45)
+
+    def test_write_value_coerces_type(self):
+        """IntegerField に文字列を渡してもフィールドが解決する"""
+        binding = _make_binding(record_id=self.personal.pk)
+
+        binding.write_value("45")
+
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 45)
+
+    def test_write_value_rejects_invalid(self):
+        """解決できない値は ValidationError"""
+        binding = _make_binding(record_id=self.personal.pk)
+
+        with self.assertRaises(ValidationError):
+            binding.write_value("四十五歳")
+
+    def test_write_value_touches_updated_at(self):
+        """auto_now の updated_at が更新される"""
+        binding = _make_binding(record_id=self.personal.pk)
+        before = self.personal.updated_at
+
+        binding.write_value(45)
+
+        self.personal.refresh_from_db()
+        self.assertGreater(self.personal.updated_at, before)
+
+    def test_field_type(self):
+        """field_type はフィールドのクラス名"""
+        binding = _make_binding(record_id=self.personal.pk)
+
+        self.assertEqual(binding.field_type, "IntegerField")
+
+
+class CellBindingValidationTest(TestCase):
+    """CellBinding の登録時バリデーション"""
+
+    def setUp(self):
+        self.personal = _make_personal()
+
+    def test_rejects_other_app_model(self):
+        """skill_sheet 以外のアプリのモデルは指定できない"""
+        binding = _make_binding(name="evil", model_label="auth.User",
+                                field_name="is_superuser", record_id=1)
+
+        with self.assertRaises(ValidationError):
+            binding.clean()
+
+    def test_rejects_unknown_field(self):
+        """存在しないフィールドは指定できない"""
+        binding = _make_binding(field_name="no_such_field", record_id=self.personal.pk)
+
+        with self.assertRaises(ValidationError):
+            binding.clean()
+
+    def test_rejects_primary_key(self):
+        """主キーは同期対象にできない"""
+        binding = _make_binding(field_name="id", record_id=self.personal.pk)
+
+        with self.assertRaises(ValidationError):
+            binding.clean()
+
+    def test_rejects_relation_field(self):
+        """リレーションは同期対象にできない"""
+        sheet = _make_sheet(self.personal)
+        binding = _make_binding(model_label="skill_sheet.SkillSheetData",
+                                field_name="personal", record_id=sheet.pk)
+
+        with self.assertRaises(ValidationError):
+            binding.clean()
+
+    def test_rejects_missing_record(self):
+        """存在しないレコードidは指定できない"""
+        binding = _make_binding(record_id=self.personal.pk + 999)
+
+        with self.assertRaises(ValidationError):
+            binding.clean()
+
+    def test_rejects_malformed_model_label(self):
+        """model_label の書式不正は BindingConfigError"""
+        binding = _make_binding(model_label="PersonalInfo", record_id=self.personal.pk)
+
+        with self.assertRaises(BindingConfigError):
+            binding.resolve_model()
+
+    def test_rejects_non_ascii_name(self):
+        """名称に全角は使えない"""
+        binding = CellBinding(name="年齢", label="年齢",
+                              model_label="skill_sheet.PersonalInfo",
+                              field_name="age", record_id=self.personal.pk)
+
+        with self.assertRaises(ValidationError) as cm:
+            binding.full_clean()
+        self.assertIn("name", cm.exception.error_dict)
+
+    def test_accepts_ascii_name_with_symbols(self):
+        """英字始まりで英数字と _ . - は使える"""
+        binding = CellBinding(name="personal.age_1-a", label="年齢",
+                              model_label="skill_sheet.PersonalInfo",
+                              field_name="age", record_id=self.personal.pk)
+
+        binding.full_clean()  # 例外が出なければ合格
+
+    def test_rejects_name_starting_with_digit(self):
+        """数字始まりは使えない"""
+        binding = CellBinding(name="1age", label="年齢",
+                              model_label="skill_sheet.PersonalInfo",
+                              field_name="age", record_id=self.personal.pk)
+
+        with self.assertRaises(ValidationError):
+            binding.full_clean()
+
+
+# ═══════════════════════════════════════════════════════════════
+# セル同期API
+# ═══════════════════════════════════════════════════════════════
+
+class CellSyncApiUrlTest(SimpleTestCase):
+    """セル同期APIのURL解決"""
+
+    def test_reverse_api_cells(self):
+        self.assertEqual(reverse("skill_sheet:api_cells"), "/skill_sheet/api/cells/")
+
+    def test_reverse_api_bindings(self):
+        self.assertEqual(reverse("skill_sheet:api_bindings"), "/skill_sheet/api/bindings/")
+
+
+class CellSyncApiTestBase(TestCase):
+    """api_password を環境変数で用意する共通土台"""
+
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ, {"SKILL_SHEET_API_PASSWORD": API_PASSWORD})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.url = reverse("skill_sheet:api_cells")
+        self.personal = _make_personal(age=40, self_pr="元の自己PR", education="○○大学 卒業")
+        self.age = _make_binding(name="personal_age", label="年齢", field_name="age",
+                                 record_id=self.personal.pk, writable=True)
+        self.self_pr = _make_binding(name="personal_self_pr", label="自己PR",
+                                     field_name="self_pr", record_id=self.personal.pk,
+                                     writable=False)
+
+    def post(self, url, payload, password=API_PASSWORD):
+        body = dict(payload)
+        if password is not None:
+            body["api_password"] = password
+        return self.client.post(url, data=json.dumps(body), content_type="application/json")
+
+
+class CellSyncApiAuthTest(CellSyncApiTestBase):
+    """認証"""
+
+    def test_wrong_password_returns_401(self):
+        """パスワード不一致は 401"""
+        response = self.post(self.url, {"items": []}, password="wrong")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["code"], 1)
+
+    def test_missing_password_returns_401(self):
+        """パスワード未指定は 401"""
+        response = self.post(self.url, {"items": []}, password=None)
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_unconfigured_password_returns_500(self):
+        """サーバー側にパスワードが設定されていなければ 500"""
+        with mock.patch.dict(os.environ, {"SKILL_SHEET_API_PASSWORD": ""}):
+            response = self.post(self.url, {"items": []})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["code"], 1)
+
+    def test_get_not_allowed(self):
+        """GET は 405"""
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_broken_json_returns_400(self):
+        """壊れたJSONは 400"""
+        response = self.client.post(self.url, data="{", content_type="application/json")
+
+        self.assertEqual(response.status_code, 400)
+
+
+class CellSyncApiRequestShapeTest(CellSyncApiTestBase):
+    """リクエスト構造の検証"""
+
+    def test_items_must_be_list(self):
+        response = self.post(self.url, {"items": {"name": "personal_age"}})
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_items_must_not_be_empty(self):
+        response = self.post(self.url, {"items": []})
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_direction_must_be_push_or_pull(self):
+        """none はクライアント側で除外される想定。APIは受け付けない"""
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "none"},
+        ]})
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_push_requires_value(self):
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push"},
+        ]})
+
+        self.assertEqual(response.status_code, 400)
+
+
+class CellSyncApiPullTest(CellSyncApiTestBase):
+    """pull（DB → ローカル）"""
+
+    def test_pull_returns_value(self):
+        response = self.post(self.url, {"items": [
+            {"name": "personal_self_pr", "direction": "pull"},
+        ]})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 0)
+        self.assertEqual(body["results"][0]["value"], "元の自己PR")
+        self.assertEqual(body["results"][0]["status"], "ok")
+
+    def test_pull_allowed_even_when_not_writable(self):
+        """writable=False でも pull はできる"""
+        self.assertFalse(self.self_pr.writable)
+
+        response = self.post(self.url, {"items": [
+            {"name": "personal_self_pr", "direction": "pull"},
+        ]})
+
+        self.assertEqual(response.status_code, 200)
+
+
+class CellSyncApiPushTest(CellSyncApiTestBase):
+    """push（ローカル → DB）"""
+
+    def test_push_updates_db(self):
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push", "value": 45},
+        ]})
+
+        self.assertEqual(response.status_code, 200)
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 45)
+
+    def test_push_coerces_string_to_integer(self):
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push", "value": "45"},
+        ]})
+
+        self.assertEqual(response.status_code, 200)
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 45)
+
+    def test_push_rejects_invalid_value(self):
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push", "value": "四十五歳"},
+        ]})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], 2)
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 40)
+
+    def test_push_error_message_includes_label(self):
+        """エラーメッセージに表示名が入る（name だけだと探しにくい）"""
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push", "value": "四十五歳"},
+        ]})
+
+        result = response.json()["results"][0]
+        self.assertEqual(result["status"], "error")
+        self.assertIn("年齢", result["error"])
+
+    def test_push_to_read_only_binding_returns_403(self):
+        """writable=False への push は 403"""
+        response = self.post(self.url, {"items": [
+            {"name": "personal_self_pr", "direction": "push", "value": "書き換え"},
+        ]})
+
+        self.assertEqual(response.status_code, 403)
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.self_pr, "元の自己PR")
+
+    def test_read_only_violation_blocks_whole_request(self):
+        """1件でも書き込み不可があれば、他の push も実行しない"""
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push", "value": 45},
+            {"name": "personal_self_pr", "direction": "push", "value": "書き換え"},
+        ]})
+
+        self.assertEqual(response.status_code, 403)
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 40)
+
+
+class CellSyncApiAtomicityTest(CellSyncApiTestBase):
+    """push の原子性"""
+
+    def setUp(self):
+        super().setUp()
+        self.education = _make_binding(name="personal_education", label="学歴",
+                                       field_name="education",
+                                       record_id=self.personal.pk, writable=True)
+
+    def test_all_or_nothing(self):
+        """後続が検証で落ちれば、先行して書いた分もロールバックされる"""
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push", "value": 45},
+            {"name": "personal_education", "direction": "push", "value": "あ" * 100},
+        ]})
+
+        self.assertEqual(response.status_code, 400)
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 40)
+        self.assertEqual(self.personal.education, "○○大学 卒業")
+
+    def test_failed_request_marks_other_items_skipped(self):
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push", "value": 45},
+            {"name": "personal_education", "direction": "push", "value": "あ" * 100},
+        ]})
+
+        results = {r["name"]: r["status"] for r in response.json()["results"]}
+        self.assertEqual(results["personal_age"], "skipped")
+        self.assertEqual(results["personal_education"], "error")
+
+    def test_mixed_push_and_pull_succeeds(self):
+        """pull と push の混在"""
+        response = self.post(self.url, {"items": [
+            {"name": "personal_self_pr", "direction": "pull"},
+            {"name": "personal_age", "direction": "push", "value": 45},
+        ]})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["results"][0]["value"], "元の自己PR")
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 45)
+
+    def test_results_preserve_request_order(self):
+        response = self.post(self.url, {"items": [
+            {"name": "personal_self_pr", "direction": "pull"},
+            {"name": "personal_age", "direction": "push", "value": 45},
+        ]})
+
+        names = [r["name"] for r in response.json()["results"]]
+        self.assertEqual(names, ["personal_self_pr", "personal_age"])
+
+
+class CellSyncApiNameResolutionTest(CellSyncApiTestBase):
+    """名称の解決（このAPIの安全性の要）"""
+
+    def test_unknown_name_returns_400(self):
+        response = self.post(self.url, {"items": [
+            {"name": "no_such_name", "direction": "pull"},
+        ]})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("no_such_name", response.json()["error"])
+
+    def test_unknown_name_lists_available_names(self):
+        """探しやすいよう、利用可能な名称を返す"""
+        response = self.post(self.url, {"items": [
+            {"name": "no_such_name", "direction": "pull"},
+        ]})
+
+        self.assertIn("personal_age", response.json()["available"])
+
+    def test_unknown_name_blocks_whole_request(self):
+        """未登録が1件でもあれば、他の push も実行しない"""
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "push", "value": 45},
+            {"name": "no_such_name", "direction": "pull"},
+        ]})
+
+        self.assertEqual(response.status_code, 400)
+        self.personal.refresh_from_db()
+        self.assertEqual(self.personal.age, 40)
+
+    def test_client_cannot_specify_table_or_field(self):
+        """
+        リクエストに model_label / field_name を混ぜても無視される。
+
+        同期先は CellBinding だけが決める。クライアントが任意のテーブルを
+        指定する経路が存在しないことの確認。
+        """
+        other = _make_personal(registration_no="R002", age=30)
+
+        response = self.post(self.url, {"items": [{
+            "name": "personal_age",
+            "direction": "push",
+            "value": 45,
+            "model_label": "auth.User",
+            "field_name": "is_superuser",
+            "record_id": other.pk,
+        }]})
+
+        self.assertEqual(response.status_code, 200)
+        self.personal.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(self.personal.age, 45)   # バインディングが指す先だけが更新される
+        self.assertEqual(other.age, 30)
+
+    def test_broken_binding_returns_500(self):
+        """バインディングの指し先が消えていればサーバーエラー（利用者の入力の問題ではない）"""
+        self.personal.delete()
+
+        response = self.post(self.url, {"items": [
+            {"name": "personal_age", "direction": "pull"},
+        ]})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["code"], 1)
+
+
+class BindingListApiTest(CellSyncApiTestBase):
+    """バインディング一覧API"""
+
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("skill_sheet:api_bindings")
+
+    def test_lists_registered_bindings(self):
+        response = self.post(self.list_url, {})
+
+        self.assertEqual(response.status_code, 200)
+        names = [b["name"] for b in response.json()["bindings"]]
+        self.assertEqual(sorted(names), ["personal_age", "personal_self_pr"])
+
+    def test_includes_label_writable_and_type(self):
+        response = self.post(self.list_url, {})
+
+        by_name = {b["name"]: b for b in response.json()["bindings"]}
+        self.assertEqual(by_name["personal_age"]["label"], "年齢")
+        self.assertTrue(by_name["personal_age"]["writable"])
+        self.assertEqual(by_name["personal_age"]["type"], "IntegerField")
+        self.assertFalse(by_name["personal_self_pr"]["writable"])
+
+    def test_does_not_expose_table_or_field(self):
+        """一覧に DB の構造情報を含めない"""
+        response = self.post(self.list_url, {})
+
+        payload = response.content.decode("utf-8")
+        self.assertNotIn("PersonalInfo", payload)
+        self.assertNotIn("record_id", payload)
+
+    def test_requires_auth(self):
+        response = self.post(self.list_url, {}, password="wrong")
+
+        self.assertEqual(response.status_code, 401)
+
+
+# ═══════════════════════════════════════════════════════════════
+# セル同期: 設定の読み込み
+# ═══════════════════════════════════════════════════════════════
+
+class ResolveSecretTest(SimpleTestCase):
+    """api_password の 'env:' 解決"""
+
+    def test_plain_value_is_returned_as_is(self):
+        """env: が付かない値はそのまま返す"""
+        self.assertEqual(resolve_secret("plain-value"), "plain-value")
+
+    def test_env_prefix_reads_environment(self):
+        """env:NAME は環境変数を引く"""
+        with mock.patch.dict(os.environ, {"SKILL_SHEET_TEST_PW": "from-export"}):
+            self.assertEqual(resolve_secret("env:SKILL_SHEET_TEST_PW"), "from-export")
+
+    def test_undefined_env_returns_empty(self):
+        """未設定なら空文字（API 側で 500 になる）"""
+        self.assertEqual(resolve_secret("env:SKILL_SHEET_NOT_DEFINED_ANYWHERE"), "")
+
+    def test_resolution_goes_through_decouple(self):
+        """
+        os.environ ではなく decouple 経由で引く。
+
+        decouple は os.environ を先に見てから .env を見るため、export でも
+        .env でも同じように通る。os.environ を直接見ると、.env に書いた値は
+        pipenv 経由で起動したときしか読めず、起動方法で挙動が変わってしまう。
+        """
+        with mock.patch("app.skill_sheet.utils.env_config", return_value="from-dotenv") as m:
+            self.assertEqual(resolve_secret("env:SOME_NAME"), "from-dotenv")
+
+        m.assert_called_once_with("SOME_NAME", default="")
+
+    def test_non_string_is_returned_as_is(self):
+        self.assertIsNone(resolve_secret(None))
+
+
+class LoadConfigTest(SimpleTestCase):
+    """同梱の config.json"""
+
+    def test_contains_api_password_key(self):
+        """api_password キーが用意されている"""
+        self.assertIn("api_password", load_config())
+
+    def test_api_password_is_not_hardcoded(self):
+        """秘密を直書きしない（リポジトリに含まれるファイルのため）"""
+        self.assertTrue(load_config()["api_password"].startswith("env:"))
+
+
+# ═══════════════════════════════════════════════════════════════
+# セル同期定義の管理画面
+# ═══════════════════════════════════════════════════════════════
+
+class BindingScreenTestBase(TestCase):
+    def setUp(self):
+        self.personal = _make_personal()
+        self.admin = User.objects.create_superuser(
+            username="admin", email="admin@example.com", password="pw"
+        )
+        self.member = User.objects.create_user(username="member", password="pw")
+        self.list_url = reverse("skill_sheet:binding_list")
+        self.create_url = reverse("skill_sheet:binding_create")
+
+    def login_admin(self):
+        self.client.force_login(self.admin)
+
+    def valid_post(self, **overrides):
+        data = {
+            "name": "personal_age",
+            "label": "年齢",
+            "description": "",
+            "model_label": "skill_sheet.PersonalInfo",
+            "field_name": "age",
+            "record_id": self.personal.pk,
+        }
+        data.update(overrides)
+        return data
+
+
+class BindingScreenPermissionTest(BindingScreenTestBase):
+    """管理者以外には見せない"""
+
+    def test_anonymous_is_redirected(self):
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+
+    def test_non_superuser_is_redirected(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_superuser_can_access(self):
+        self.login_admin()
+
+        self.assertEqual(self.client.get(self.list_url).status_code, 200)
+
+    def test_create_and_edit_are_protected(self):
+        binding = _make_binding(record_id=self.personal.pk)
+        edit_url = reverse("skill_sheet:binding_edit", kwargs={"pk": binding.pk})
+        self.client.force_login(self.member)
+
+        self.assertEqual(self.client.get(self.create_url).status_code, 302)
+        self.assertEqual(self.client.get(edit_url).status_code, 302)
+
+    def test_non_superuser_cannot_create(self):
+        """POST も弾く（画面を隠すだけでは足りない）"""
+        self.client.force_login(self.member)
+
+        self.client.post(self.create_url, self.valid_post())
+
+        self.assertEqual(CellBinding.objects.count(), 0)
+
+
+class BindingListTest(BindingScreenTestBase):
+    def setUp(self):
+        super().setUp()
+        self.login_admin()
+
+    def test_uses_template(self):
+        response = self.client.get(self.list_url)
+
+        self.assertTemplateUsed(response, "skill_sheet/binding_list.html")
+
+    def test_lists_in_id_descending_order(self):
+        _make_binding(name="first", record_id=self.personal.pk)
+        _make_binding(name="second", record_id=self.personal.pk)
+
+        response = self.client.get(self.list_url)
+
+        names = [b.name for b in response.context["bindings"]]
+        self.assertEqual(names, ["second", "first"])
+
+    def test_empty_list_is_fine(self):
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(list(response.context["bindings"]), [])
+
+
+class BindingCreateTest(BindingScreenTestBase):
+    def setUp(self):
+        super().setUp()
+        self.login_admin()
+
+    def test_get_shows_form(self):
+        response = self.client.get(self.create_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "skill_sheet/binding_form.html")
+        self.assertTrue(response.context["is_new"])
+
+    def test_post_creates_binding(self):
+        response = self.client.post(self.create_url, self.valid_post())
+
+        self.assertRedirects(response, self.list_url)
+        binding = CellBinding.objects.get(name="personal_age")
+        self.assertEqual(binding.field_name, "age")
+        self.assertEqual(binding.record_id, self.personal.pk)
+
+    def test_writable_defaults_to_false(self):
+        """チェックを付けなければ読み取り専用のまま"""
+        self.client.post(self.create_url, self.valid_post())
+
+        self.assertFalse(CellBinding.objects.get(name="personal_age").writable)
+
+    def test_writable_can_be_set(self):
+        self.client.post(self.create_url, self.valid_post(writable="on"))
+
+        self.assertTrue(CellBinding.objects.get(name="personal_age").writable)
+
+    def test_rejects_missing_record(self):
+        response = self.client.post(
+            self.create_url, self.valid_post(record_id=self.personal.pk + 999)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(CellBinding.objects.count(), 0)
+        self.assertTrue(response.context["form"].non_field_errors())
+
+    def test_rejects_field_of_another_model(self):
+        """モデルとフィールドの組み合わせが不正なら弾く"""
+        response = self.client.post(
+            self.create_url, self.valid_post(field_name="project_name")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(CellBinding.objects.count(), 0)
+
+    def test_rejects_non_ascii_name(self):
+        response = self.client.post(self.create_url, self.valid_post(name="年齢"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("name", response.context["form"].errors)
+
+    def test_rejects_duplicate_name(self):
+        _make_binding(name="personal_age", record_id=self.personal.pk)
+
+        response = self.client.post(self.create_url, self.valid_post())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(CellBinding.objects.count(), 1)
+
+
+class BindingEditTest(BindingScreenTestBase):
+    def setUp(self):
+        super().setUp()
+        self.login_admin()
+        self.binding = _make_binding(record_id=self.personal.pk, writable=False)
+        self.url = reverse("skill_sheet:binding_edit", kwargs={"pk": self.binding.pk})
+
+    def test_get_shows_current_values(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["is_new"])
+        self.assertEqual(response.context["form"].initial["field_name"], "age")
+
+    def test_post_updates(self):
+        response = self.client.post(
+            self.url, self.valid_post(label="満年齢", writable="on")
+        )
+
+        self.assertRedirects(response, self.list_url)
+        self.binding.refresh_from_db()
+        self.assertEqual(self.binding.label, "満年齢")
+        self.assertTrue(self.binding.writable)
+
+    def test_does_not_create_a_new_row(self):
+        self.client.post(self.url, self.valid_post(label="満年齢"))
+
+        self.assertEqual(CellBinding.objects.count(), 1)
+
+    def test_missing_pk_returns_404(self):
+        url = reverse("skill_sheet:binding_edit", kwargs={"pk": self.binding.pk + 999})
+
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+
+class BindingFormChoicesTest(TestCase):
+    """ドロップダウンの中身"""
+
+    def test_model_choices_are_skill_sheet_only(self):
+        labels = [value for value, _ in model_choices() if value]
+
+        self.assertIn("skill_sheet.PersonalInfo", labels)
+        self.assertTrue(all(v.startswith("skill_sheet.") for v in labels))
+
+    def test_cell_binding_itself_is_not_selectable(self):
+        """定義テーブル自身を同期対象にはできない"""
+        labels = [value for value, _ in model_choices()]
+
+        self.assertNotIn("skill_sheet.CellBinding", labels)
+
+    def test_field_choices_exclude_auto_fields(self):
+        fields = [n for n, _ in field_choices_by_model()["skill_sheet.PersonalInfo"]]
+
+        self.assertIn("age", fields)
+        self.assertNotIn("id", fields)
+        self.assertNotIn("created_at", fields)
+        self.assertNotIn("updated_at", fields)
+
+    def test_field_choices_exclude_relations(self):
+        fields = [n for n, _ in field_choices_by_model()["skill_sheet.SkillSheetData"]]
+
+        self.assertIn("project_name", fields)
+        self.assertNotIn("personal", fields)
+
+    def test_form_field_map_covers_every_model(self):
+        form = CellBindingForm()
+
+        self.assertEqual(
+            sorted(form.field_map),
+            ["skill_sheet.PersonalInfo", "skill_sheet.SkillSheetData"],
+        )
+
+
+class BindingSampleConfigTest(BindingScreenTestBase):
+    """画面下部に出す設定ファイルの雛形"""
+
+    def setUp(self):
+        super().setUp()
+        self.login_admin()
+        patcher = mock.patch.dict(os.environ, {"SKILL_SHEET_API_PASSWORD": API_PASSWORD})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def sample(self):
+        response = self.client.get(self.list_url)
+        return json.loads(response.context["sample_config"])
+
+    def test_endpoint_matches_this_server(self):
+        sample = self.sample()
+
+        self.assertEqual(sample["endpoint"], "http://testserver/skill_sheet/api/cells/")
+
+    def test_api_password_is_resolved(self):
+        self.assertEqual(self.sample()["api_password"], API_PASSWORD)
+
+    def test_pairs_are_in_id_descending_order(self):
+        _make_binding(name="first", record_id=self.personal.pk)
+        _make_binding(name="second", record_id=self.personal.pk)
+
+        pairs = self.sample()["books"][0]["pairs"]
+
+        self.assertEqual([p["name"] for p in pairs], ["second", "first"])
+
+    def test_sheet_and_cell_are_blank(self):
+        _make_binding(record_id=self.personal.pk)
+
+        pair = self.sample()["books"][0]["pairs"][0]
+
+        self.assertEqual(pair["sheet"], "")
+        self.assertEqual(pair["cell"], "")
+
+    def test_fixed_book_settings(self):
+        book = self.sample()["books"][0]
+
+        self.assertEqual(book["path"], "C:/xxx.xlsx")
+        self.assertEqual(book["direction"], "pull")
+        self.assertIs(book["save_after_pull"], False)
+
+    def test_is_valid_json_even_without_bindings(self):
+        self.assertEqual(self.sample()["books"][0]["pairs"], [])
+
+    def test_unresolved_password_shows_the_setting(self):
+        """解決できないときは設定値そのものを出す（どこを直すか分かるように）"""
+        with mock.patch.dict(os.environ, {"SKILL_SHEET_API_PASSWORD": ""}):
+            sample = self.sample()
+
+        self.assertEqual(sample["api_password"], "env:SKILL_SHEET_API_PASSWORD")

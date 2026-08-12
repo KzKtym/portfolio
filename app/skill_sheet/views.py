@@ -16,7 +16,7 @@ def detail(request, pk):
     personal = get_object_or_404(PersonalInfo, pk=pk)
     
     # スキルシート取得（開始年月降順）
-    skill_sheets = SkillSheetData.objects.filter(personal=personal).order_by('-start_month')
+    skill_sheets = SkillSheetData.objects.filter(personal=personal).order_by('-start_month', '-id')
     
     # 設定ファイル読み込み
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')

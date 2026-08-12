@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if is_new %}セル同期定義の新規登録{% else %}セル同期定義の編集{% endif %}</title>
+    <link rel="stylesheet" href="{% static 'common.css' %}">
+    <link rel="stylesheet" href="{% static 'skill_sheet/binding.css' %}">
+</head>
+<body>
+    <div class="binding-container binding-form-container">
+        <div class="binding-header">
+            <h1>{% if is_new %}セル同期定義の新規登録{% else %}セル同期定義の編集{% endif %}</h1>
+            <div class="binding-header-buttons">
+                <a class="btn btn-home" href="{% url 'skill_sheet:binding_list' %}">一覧へ戻る</a>
+            </div>
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="form-errors">
+                    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+                </div>
+            {% endif %}
+
+            <fieldset>
+                <legend>基本</legend>
+                {% for field in basic_fields %}
+                    {% include "skill_sheet/_binding_field.html" %}
+                {% endfor %}
+            </fieldset>
+
+            <fieldset>
+                <legend>同期先</legend>
+                <p class="note">
+                    ここで指定した先だけが同期の対象になる。
+                    ローカル側の設定ファイルには公開されない。
+                </p>
+                {% for field in target_fields %}
+                    {% include "skill_sheet/_binding_field.html" %}
+                {% endfor %}
+            </fieldset>
+
+            <fieldset>
+                <legend>権限</legend>
+                {% for field in permission_fields %}
+                    {% include "skill_sheet/_binding_field.html" %}
+                {% endfor %}
+            </fieldset>
+
+            <div class="form-actions">
+                <button class="btn btn-primary" type="submit">保存</button>
+                <a class="btn" href="{% url 'skill_sheet:binding_list' %}">キャンセル</a>
+            </div>
+        </form>
+    </div>
+
+    {{ field_map|json_script:"field-map" }}
+    <script src="{% static 'skill_sheet/binding.js' %}"></script>
+</body>
+</html>

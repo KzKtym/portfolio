@@ -1,0 +1,10 @@
+<div class="form-row">
+    <label for="{{ field.id_for_label }}">
+        {{ field.label }}{% if field.field.required %} <span class="required">*</span>{% endif %}
+    </label>
+    <div class="form-input">
+        {{ field }}
+        {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+        {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
+    </div>
+</div>

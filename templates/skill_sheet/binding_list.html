@@ -1,0 +1,75 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>セル同期定義</title>
+    <link rel="stylesheet" href="{% static 'common.css' %}">
+    <link rel="stylesheet" href="{% static 'skill_sheet/binding.css' %}">
+</head>
+<body>
+    <div class="binding-container">
+        <div class="binding-header">
+            <h1>セル同期定義</h1>
+            <div class="binding-header-buttons">
+                <a class="btn btn-home" href="{% url 'home:home' %}">Home</a>
+                <a class="btn btn-primary" href="{% url 'skill_sheet:binding_create' %}">新規登録</a>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <p class="flash">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <section>
+            <table class="binding-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名称</th>
+                        <th>表示名</th>
+                        <th>同期先</th>
+                        <th>push</th>
+                        <th>説明</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in bindings %}
+                        <tr>
+                            <td>{{ b.id }}</td>
+                            <td><code>{{ b.name }}</code></td>
+                            <td>{{ b.label }}</td>
+                            <td class="target">{{ b.model_label }}.{{ b.field_name }} #{{ b.record_id }}</td>
+                            <td class="center">{% if b.writable %}o{% else %}-{% endif %}</td>
+                            <td class="description">{{ b.description|default:"" }}</td>
+                            <td><a href="{% url 'skill_sheet:binding_edit' pk=b.pk %}">編集</a></td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="7" class="empty">まだ登録がありません。</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p class="note">削除は<a href="/admin/skill_sheet/cellbinding/">管理サイト</a>から行う。</p>
+        </section>
+
+        <section class="sample-section">
+            <div class="section-header">
+                <h2>ローカル設定ファイルの雛形</h2>
+                <button class="btn" type="button" id="copy-sample">コピー</button>
+            </div>
+            <p class="note">
+                ペアは登録の新しい順。<code>path</code> と、各ペアの
+                <code>sheet</code> / <code>cell</code> はブックに合わせて書き換える。
+                同期しないペアは <code>"direction": "none"</code> を足して無効にできる。
+            </p>
+            <pre id="sample-config">{{ sample_config }}</pre>
+        </section>
+    </div>
+
+    <script src="{% static 'skill_sheet/binding.js' %}"></script>
+</body>
+</html>
