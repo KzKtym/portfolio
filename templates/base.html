@@ -28,17 +28,14 @@
                 <nav class="nav">
                     {% if user.is_authenticated %}
                         <!-- ログイン後 -->
-                        <span class="navbar-text me-3"  data-bs-toggle="tooltip" data-bs-placement="bottom"
-                            title="{{ user.get_full_name|default:user.username }}">
-                            <i class="fas fa-user fa-lg user-icon"></i>&nbsp;User
-                        </span>
+                        <i class="fas fa-user fa-lg user-icon"></i>{{ user.get_full_name|default:user.username }}
 
 
                         {% if user.is_superuser %}
-                            <a href="{% url 'accounts:signup' %}" class="nav-button
-                            signup-button">
-                                新規ユーザー作成
+                            <a href="{% url 'service_admin:index' %}" class="nav-button signup-button">
+                                サービス管理
                             </a>
+
                         {% endif %}
                         
                         <form method="post" action="{% url 'accounts:logout' %}" 

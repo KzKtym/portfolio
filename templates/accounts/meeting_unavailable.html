@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}リンクが利用できません - PortfolioPages{% endblock %}
+
+{% block extra_css %}
+    {% load static %}
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="same-origin">
+    <link rel="stylesheet" href="{% static 'home/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-form">
+        <h1 class="auth-title">リンクが利用できません</h1>
+        {# 期限切れ・失効・不正な値を区別せず同じ文面にする（探索の手がかりを与えない） #}
+        <p class="auth-subtitle">
+            有効期限が切れているか、無効になっている可能性があります。
+        </p>
+        <p class="field-help">
+            お手数ですが、ご担当者までご連絡ください。
+        </p>
+    </div>
+</div>
+{% endblock %}

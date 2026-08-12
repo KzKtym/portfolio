@@ -150,6 +150,36 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/home/'
 LOGOUT_REDIRECT_URL = '/'
 
+# ---------------------------------------------------------------------------
+# ログイン試行のロック（ID/PW・商談用トークンの両方に適用）
+#   閾値は運用しながら調整する前提なので、すべて .env から変更できるようにする。
+#   カウンタは成功時のみリセット（時間窓で自然回復させると総当たりを素通しするため）。
+# ---------------------------------------------------------------------------
+# 連続何回の失敗でロックするか
+LOGIN_LOCK_THRESHOLD = config('LOGIN_LOCK_THRESHOLD', default=5, cast=int)
+# 最初のロック秒数。以降の失敗ごとに倍化する
+LOGIN_LOCK_SECONDS = config('LOGIN_LOCK_SECONDS', default=60, cast=int)
+# 倍化の上限秒数
+LOGIN_LOCK_MAX_SECONDS = config('LOGIN_LOCK_MAX_SECONDS', default=3600, cast=int)
+# ロックの単位: 'user_ip'（ユーザー名+IP。既定）/ 'user'（ユーザー名のみ）
+#   'user' は分散攻撃に強い反面、第三者が管理者を締め出せてしまう（自DoS）。
+LOGIN_LOCK_SCOPE = config('LOGIN_LOCK_SCOPE', default='user_ip')
+
+# ---------------------------------------------------------------------------
+# 商談用アクセス（トークンURL + パスワード）
+# ---------------------------------------------------------------------------
+# 累計失敗が何回に達したらトークンを失効させるか
+MEETING_REVOKE_THRESHOLD = config('MEETING_REVOKE_THRESHOLD', default=20, cast=int)
+# 発行時の既定有効日数（絶対期限）
+MEETING_EXPIRE_DAYS = config('MEETING_EXPIRE_DAYS', default=30, cast=int)
+# 最終アクセスからこの日数が経過したら無効（無操作期限）。0 で無効化
+MEETING_IDLE_DAYS = config('MEETING_IDLE_DAYS', default=7, cast=int)
+# 発行するトークンの桁数（URLに載る値）。15桁で約77bit相当。
+# 総当たりはロックと失効で抑えるため、URLの短さを優先している。
+MEETING_TOKEN_LENGTH = config('MEETING_TOKEN_LENGTH', default=15, cast=int)
+# 自動生成パスワードの桁数
+MEETING_PASSWORD_LENGTH = config('MEETING_PASSWORD_LENGTH', default=16, cast=int)
+
 
 # Email settings (development - console backend)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

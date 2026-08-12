@@ -28,6 +28,12 @@ urlpatterns = [
     # ホーム（ログイン後）
     path('home/', include('app.home.urls')),
 
+    # サービス管理（管理者のみ）。実体は home アプリのビュー。
+    path('service_admin/', include('app.home.urls_service_admin')),
+
+    # 商談用アクセス（ゲスト）。相手に渡すURLなので短くする。実体は accounts のビュー。
+    path('guest/', include('accounts.urls_guest')),
+
     # アプリケーション
     path('test/', include(([path('', _test_page, name='index')], 'test_page'))),
     path('skill_sheet/', include('app.skill_sheet.urls')),

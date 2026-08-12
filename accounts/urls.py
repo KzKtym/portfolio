@@ -8,8 +8,8 @@ from . import views
 app_name = 'accounts'
 
 urlpatterns = [
-    # Django標準の認証ビュー
-    path('login/', auth_views.LoginView.as_view(), name='login'),
+    # Django標準の認証ビュー（ログインのみ失敗ロックを足したサブクラス）
+    path('login/', views.LockedLoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 
     # パスワード変更（success_url は名前空間付きで明示）

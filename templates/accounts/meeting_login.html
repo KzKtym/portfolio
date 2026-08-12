@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}パスワード入力 - PortfolioPages{% endblock %}
+
+{% block extra_css %}
+    {% load static %}
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="same-origin">
+    <link rel="stylesheet" href="{% static 'home/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-form">
+        <h1 class="auth-title">パスワード入力</h1>
+
+        {% if error %}
+            <div class="auth-errors">
+                <div class="error-item">{{ error }}</div>
+            </div>
+        {% endif %}
+
+        <form method="post" class="auth-form-content">
+            {% csrf_token %}
+
+            <div class="form-group">
+                {# 商談名。ラベルと同じ体裁で値だけを出す（ユーザー名は出さない） #}
+                <p class="form-value">{{ access.label }}</p>
+            </div>
+
+            <div class="form-group">
+                <label for="password">パスワード</label>
+                <input type="password" name="password" id="password"
+                       autocomplete="current-password" autofocus required>
+                <div class="field-help">
+                    お渡ししたパスワードを入力してください。
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="button button-primary button-full">
+                    ログイン
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

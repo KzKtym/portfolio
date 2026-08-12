@@ -9,6 +9,10 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+# 商談用アクセスのIDを一時的に置くセッションキー。
+# トークンをURLから消すため、着地時にここへ移してリダイレクトする。
+SESSION_MEETING_KEY = 'meeting_access_id'
+
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
@@ -18,6 +22,12 @@ def log_user_login(sender, request, user, **kwargs):
 
     logger.info(f'ログイン成功: {user.username} from {ip_address} ({user_agent})')
 
+    # 商談用トークン経由なら、どの発行分から入ったかを履歴に残す。
+    # 使い終わったらセッションから外す（後続のログインに引き継がせない）。
+    meeting_access_id = None
+    if request is not None and hasattr(request, 'session'):
+        meeting_access_id = request.session.pop(SESSION_MEETING_KEY, None)
+
     # ログイン履歴を1行残す。履歴保存の失敗が認証そのものを止めないよう、
     # ここでの例外は握りつぶしてログにのみ残す。
     try:
@@ -26,6 +36,7 @@ def log_user_login(sender, request, user, **kwargs):
             user=user,
             ip_address=ip_address or None,
             user_agent=(user_agent or '')[:255],
+            meeting_access_id=meeting_access_id,
         )
     except Exception:
         logger.exception(f'ログイン履歴の保存に失敗: {user.username}')

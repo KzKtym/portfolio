@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+
+{% block title %}サービス管理 - PortfolioPages{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<meta name="robots" content="noindex, nofollow">
+{# 見出し・お知らせ表示は /home/ と同じ見た目にそろえるため home.css を先に読み込む #}
+<link rel="stylesheet" href="{% static 'home/home.css' %}">
+<link rel="stylesheet" href="{% static 'home/service_admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-section">
+    <div class="dashboard-header">
+        <h1>サービス管理メニュー</h1>
+    </div>
+    <div class="admin-actions">
+        <a href="{% url 'admin:index' %}" class="button button-secondary">
+            管理画面
+        </a>
+    </div>
+</div>
+
+<!-- ===== ユーザー一覧 ===== -->
+<section class="admin-section">
+    <div class="admin-section-header">
+        <h2>ユーザー一覧</h2>
+        <div class="admin-filters">
+            <a href="?users=all&amp;logs={{ log_filter }}"
+               class="filter-button{% if user_filter == 'all' %} is-active{% endif %}">all</a>
+            <a href="?users=active&amp;logs={{ log_filter }}"
+               class="filter-button{% if user_filter == 'active' %} is-active{% endif %}">active</a>
+        </div>
+    </div>
+
+    <div class="admin-table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>is_superuser</th>
+                    <th>username</th>
+                    <th>email</th>
+                    <th>is_staff</th>
+                    <th>is_active</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="col-num">{{ u.id }}</td>
+                    <td class="col-bool">{{ u.is_superuser|yesno:"✓,-" }}</td>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.email|default:"-" }}</td>
+                    <td class="col-bool">{{ u.is_staff|yesno:"✓,-" }}</td>
+                    <td class="col-bool">{{ u.is_active|yesno:"✓,-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="empty-row">該当するユーザーはいません。</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</section>
+
+<!-- ===== 新規発行（ユーザー作成と発行をまとめて行う） ===== -->
+<section class="admin-section" id="issue-section">
+    <div class="admin-section-header">
+        <h2>新規発行</h2>
+    </div>
+
+    {% if issued %}
+    {# 発行結果。「閉じる」を押すまで残る。DBに平文を持たないためここでしか見られない #}
+    <div class="issued-panel">
+        <h3>発行しました</h3>
+        <dl>
+            <dt>商談名</dt><dd>{{ issued.label }}</dd>
+            <dt>ユーザー</dt><dd>{{ issued.username }}</dd>
+            <dt>URL</dt>
+            <dd>
+                <code class="issued-secret" id="issued-url">{{ issued.url }}</code>
+                <button type="button" class="filter-button copy-button"
+                        data-copy-target="issued-url" data-copy-prefix="URL: ">コピー</button>
+            </dd>
+            {% if issued.password %}
+            <dt>パスワード</dt>
+            <dd>
+                <code class="issued-secret" id="issued-password">{{ issued.password }}</code>
+                <button type="button" class="filter-button copy-button"
+                        data-copy-target="issued-password" data-copy-prefix="Pass: ">コピー</button>
+            </dd>
+            {% else %}
+            <dt>パスワード</dt><dd>変更していません（既存のパスワードのまま）</dd>
+            {% endif %}
+        </dl>
+        <p class="field-note">
+            URLとパスワードは別々の経路で伝えてください。
+            閉じると再表示できません（控え損ねた場合は下の一覧の「再発行」で作り直せます）。
+        </p>
+        <form method="post" action="{% url 'service_admin:issued_dismiss' %}">
+            {% csrf_token %}
+            <button type="submit" class="button button-secondary">閉じる</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {# 既定は折りたたみ。発行結果パネル（上）はこの外に置き、閉じても隠れないようにする #}
+    <details class="admin-details">
+        <summary>発行フォームを開く</summary>
+        <form method="post" action="{% url 'service_admin:meeting_issue' %}"
+              class="admin-form" id="issue-form">
+        {% csrf_token %}
+        <div class="admin-form-row">
+            <label for="meeting-label">商談名・相手先</label>
+            <input type="text" name="label" id="meeting-label" maxlength="100" required>
+        </div>
+        <div class="admin-form-row">
+            <label for="meeting-username">対象ユーザー</label>
+            <select name="username" id="meeting-username">
+                <option value="__new__" selected>＋ 新規作成</option>
+                {% for u in users %}
+                <option value="{{ u.username }}">{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {# 「新規作成」のときだけ出す。パスワードは常に自動生成なので入力欄は無い #}
+        <div class="admin-form-row" data-when="new">
+            <label for="meeting-new-username">新規ユーザー名</label>
+            <input type="text" name="new_username" id="meeting-new-username" maxlength="150">
+        </div>
+        {# 既存ユーザーを選んだときだけ出す #}
+        <div class="admin-form-row is-hidden" data-when="existing">
+            <label for="meeting-regenerate">パスワード再生成</label>
+            <input type="checkbox" name="regenerate_password" id="meeting-regenerate" checked>
+        </div>
+        <div class="admin-form-row">
+            <label for="meeting-days">有効日数</label>
+            <input type="number" name="expire_days" id="meeting-days" min="1"
+                   max="{{ meeting_expire_days }}" value="{{ meeting_expire_days }}">
+        </div>
+        <div class="admin-form-actions">
+            <button type="submit" class="button button-primary">発行</button>
+            <span class="field-note">
+                パスワードは自動生成されます。既存ユーザーで再生成すると、
+                そのユーザーの既存パスワードは使えなくなります。
+            </span>
+        </div>
+        </form>
+    </details>
+</section>
+
+<!-- ===== 商談用アクセス ===== -->
+<section class="admin-section">
+    <div class="admin-section-header">
+        <h2>商談用アクセス</h2>
+    </div>
+
+
+    <div class="admin-table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>商談名・相手先</th>
+                    <th>ユーザー</th>
+                    <th>状態</th>
+                    <th>有効期限</th>
+                    <th>最終アクセス</th>
+                    <th>失敗（連続/累計）</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in meeting_accesses %}
+                <tr>
+                    <td class="col-num">{{ a.id }}</td>
+                    <td>{{ a.label }}</td>
+                    <td>{{ a.user.username }}</td>
+                    <td>{{ a.status }}</td>
+                    <td>{{ a.expires_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ a.last_accessed_at|date:"Y-m-d H:i"|default:"-" }}</td>
+                    <td class="col-num">
+                        {% if a.lock %}{{ a.lock.fail_count }} / {{ a.lock.fail_total }}{% else %}0 / 0{% endif %}
+                    </td>
+                    <td class="col-actions">
+                        <form method="post" action="{% url 'service_admin:meeting_reissue' a.id %}"
+                              onsubmit="return confirm('新しいURLとパスワードを発行し、今のリンクは失効します。よろしいですか？');">
+                            {% csrf_token %}
+                            <button type="submit" class="filter-button">再発行</button>
+                        </form>
+                        {% if not a.revoked_at %}
+                        <form method="post" action="{% url 'service_admin:meeting_revoke' a.id %}"
+                              onsubmit="return confirm('このリンクを失効させます。よろしいですか？');">
+                            {% csrf_token %}
+                            <button type="submit" class="filter-button">失効</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="empty-row">発行済みの商談用アクセスはありません。</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ===== お知らせ管理 ===== -->
+<section class="admin-section" id="notice-section">
+    <div class="admin-section-header">
+        <h2>お知らせ管理</h2>
+        <div class="admin-filters">
+            <button type="button" class="filter-button" id="notice-edit-button">Edit</button>
+        </div>
+    </div>
+
+    <!-- 表示モード -->
+    <div class="notice-view" id="notice-view">
+        <div class="system-infomation">{{ notice_html }}</div>
+    </div>
+
+    <!-- 編集モード（既定は非表示。Edit 押下で遷移せず切り替える） -->
+    <form class="notice-edit is-hidden" id="notice-edit"
+          method="post" action="{% url 'service_admin:notice_save' %}">
+        {% csrf_token %}
+        <div class="notice-tabs" role="tablist">
+            <button type="button" class="notice-tab is-active" data-tab="write">編集</button>
+            <button type="button" class="notice-tab" data-tab="preview">プレビュー</button>
+        </div>
+
+        <div class="notice-pane" data-pane="write">
+            <textarea name="content" id="notice-textarea" rows="14"
+                      spellcheck="false">{{ notice_text }}</textarea>
+        </div>
+        <div class="notice-pane is-hidden" data-pane="preview">
+            <div class="system-infomation" id="notice-preview"></div>
+        </div>
+
+        <div class="notice-buttons">
+            <button type="button" class="button button-secondary" id="notice-cancel-button">Cancel</button>
+            <button type="submit" class="button button-primary">Save</button>
+        </div>
+    </form>
+</section>
+
+<!-- ===== アクセスログ ===== -->
+<section class="admin-section">
+    <div class="admin-section-header">
+        <h2>アクセスログ</h2>
+        <div class="admin-filters">
+            <a href="?users={{ user_filter }}&amp;logs=tail20"
+               class="filter-button{% if log_filter == 'tail20' %} is-active{% endif %}">tail20</a>
+            <a href="?users={{ user_filter }}&amp;logs=last3byu"
+               class="filter-button{% if log_filter == 'last3byu' %} is-active{% endif %}">Last3 by user</a>
+            <a href="?users={{ user_filter }}&amp;logs=last"
+               class="filter-button{% if log_filter == 'last' %} is-active{% endif %}">Last Login</a>
+        </div>
+    </div>
+
+    <div class="admin-table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>ユーザー</th>
+                    <th>ログイン日時</th>
+                    <th>経路</th>
+                    <th>IPアドレス</th>
+                    <th>ユーザーエージェント</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in login_histories %}
+                <tr>
+                    <td class="col-num">{{ h.id }}</td>
+                    <td>{{ h.user.username }}</td>
+                    <td>{{ h.logged_in_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{% if h.meeting_access %}商談: {{ h.meeting_access.label }}{% else %}ID/PW{% endif %}</td>
+                    <td>{{ h.ip_address|default:"-" }}</td>
+                    <td class="col-ua" title="{{ h.user_agent }}">{{ h.user_agent|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="empty-row">ログイン履歴はありません。</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'home/service_admin.js' %}"
+        data-preview-url="{% url 'service_admin:notice_preview' %}"></script>
+{% endblock %}
