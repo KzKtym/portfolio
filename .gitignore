@@ -36,6 +36,13 @@ media/
 # Vue SPA のビルド成果物（ソースは frontend/work_shift/。npm run build で生成）
 /app/work_shift/static/work_shift/
 
+# TypeScript の増分ビルド情報（tsc が生成するキャッシュ。ソースではない）
+*.tsbuildinfo
+
+# ===== WSL =====
+# Windows 側からコピーしたファイルに付く代替データストリーム（NTFS の Zone.Identifier）
+*:Zone.Identifier
+
 # ===== ENVIRONMENT VARIABLES =====
 .env
 .env.local
