@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import DownloadToken, DownloadUser, generate_token, upload_to_download
-from .utils import get_draft_template_path, load_config, render_draft_text
+from .utils import get_draft_template_path, load_config, render_draft_text, resolve_secret
 from .views import (
     _build_absolute_url,
     _calc_expiration,
@@ -87,8 +87,23 @@ def _write_draft_template(base_dir, upload_type, text):
     return path
 
 
+API_PASSWORD = "test-download-api-pass"
+
+
 def _api_password():
-    return load_config()["api_password"]
+    """API テストが送る api_password。
+
+    config.json は 'env:DOWNLOAD_API_PASSWORD' を持つだけなので、ビューが
+    resolve_secret で引く先の環境変数を各テストで用意する（_use_api_password）。
+    """
+    return API_PASSWORD
+
+
+def _use_api_password(testcase):
+    """DOWNLOAD_API_PASSWORD をテストの間だけ環境変数に置く"""
+    patcher = mock.patch.dict(os.environ, {"DOWNLOAD_API_PASSWORD": API_PASSWORD})
+    patcher.start()
+    testcase.addCleanup(patcher.stop)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -314,6 +329,27 @@ class LoadConfigTest(SimpleTestCase):
         self.assertIsInstance(config["upload_limit_minutes"], int)
         self.assertIsInstance(config["download_expire_days"], int)
 
+    def test_api_password_is_not_hardcoded(self):
+        """api_password は環境変数参照であって平文ではない
+
+        config.json は git 追跡下にあるため、直書きするとリポジトリに秘密が残る。
+        """
+        self.assertTrue(load_config()["api_password"].startswith("env:"))
+
+
+class DownloadResolveSecretTest(SimpleTestCase):
+    """api_password の 'env:' 解決（download 経路）"""
+
+    def test_resolves_configured_password(self):
+        """config.json の env: 参照が環境変数の値に解決される"""
+        with mock.patch.dict(os.environ, {"DOWNLOAD_API_PASSWORD": "from-export"}):
+            self.assertEqual(resolve_secret(load_config()["api_password"]), "from-export")
+
+    def test_undefined_resolves_to_empty(self):
+        """環境変数が未設定なら空文字（認証は500で弾かれる）"""
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(resolve_secret("env:DOWNLOAD_NOT_DEFINED"), "")
+
 
 class GetDraftTemplatePathTest(SimpleTestCase):
     """get_draft_template_path のテスト"""
@@ -476,6 +512,7 @@ class ApiIssueTokenTest(TestCase):
     """api_issue_token のテスト"""
 
     def setUp(self):
+        _use_api_password(self)
         self.url = reverse("download:api_issue_token")
 
     # ──────────────────────────────────────────────
@@ -593,6 +630,7 @@ class ApiUploadTest(TestCase):
     """api_upload のテスト"""
 
     def setUp(self):
+        _use_api_password(self)
         _temp_media(self)
         self.url = reverse("download:api_upload")
         self.token_obj = _make_token()

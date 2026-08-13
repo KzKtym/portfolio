@@ -10,7 +10,7 @@ from django.http import HttpResponse
 from django.urls import path, include
 from django.views.generic import TemplateView
 
-from app.home.decorators import no_cache_no_index
+from app.common.decorators import no_cache_no_index
 from app.work_shift import spa_views as work_shift_spa_views
 
 # サービスカード遷移先のダミー画面（"Test page." を表示するだけ）

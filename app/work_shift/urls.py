@@ -16,7 +16,7 @@ work_shift アプリのURLconf。config/urls.py 側で以下のように include
 from django.contrib.auth.decorators import login_required
 from django.urls import path
 
-from app.home.decorators import no_cache_no_index
+from app.common.decorators import no_cache_no_index
 
 from . import spa_views, views
 

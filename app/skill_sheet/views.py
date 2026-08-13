@@ -1,8 +1,7 @@
-import json
-import os
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
 from .models import PersonalInfo, SkillSheetData
+from .utils import load_config
 import unicodedata
 
 def index(request):
@@ -19,9 +18,7 @@ def detail(request, pk):
     skill_sheets = SkillSheetData.objects.filter(personal=personal).order_by('-start_month', '-id')
     
     # 設定ファイル読み込み
-    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
+    config = load_config()
     
     # 検索キーワード取得
     search_query = request.GET.get('search', '').strip()

@@ -16,7 +16,8 @@ from .models import (
     generate_meeting_token,
     hash_meeting_token,
 )
-from .views import is_superuser, signup_permission_denied
+from app.common.permissions import is_superuser
+from .views import signup_permission_denied
 
 
 def _make_user(username="testuser", password="test-pass-1234", **kwargs):
@@ -68,7 +69,11 @@ class AuthUrlResolveTest(SimpleTestCase):
 
 
 class IsSuperuserTest(TestCase):
-    """is_superuser のテスト"""
+    """is_superuser が実ユーザーに対して期待どおり働くことのテスト。
+
+    述語そのものの単体テストは app/common/tests.py 側にある。ここでは
+    accounts のビューが実際に使う経路（Django の User モデル）で確認する。
+    """
 
     def test_superuser_returns_true(self):
         """スーパーユーザーなら True"""

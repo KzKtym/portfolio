@@ -13,8 +13,9 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from app.common.decorators import no_cache_no_index
 from .models import DownloadToken, DownloadUser, generate_token
-from .utils import get_draft_template_path, load_config, render_draft_text
+from .utils import get_draft_template_path, load_config, render_draft_text, resolve_secret
 
 
 # ---------------------------------------------------------------------------
@@ -49,16 +50,6 @@ def _get_client_ip(request):
     return request.META.get('REMOTE_ADDR', '')
 
 
-def no_cache_no_index(view_func):
-    """ブラウザキャッシュ抑制とクローラー除外用ヘッダーを付与するデコレータ"""
-    def wrapped(request, *args, **kwargs):
-        response = view_func(request, *args, **kwargs)
-        response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response['X-Robots-Tag'] = 'noindex, nofollow'
-        return response
-    return wrapped
-
-
 def _visible_tokens_queryset(request, base_queryset):
     """ログインユーザーに応じてDownloadTokenを絞り込む（スーパーユーザーは全件）"""
     if request.user.is_superuser:
@@ -90,8 +81,12 @@ def _check_user_owner(request, user_obj):
 
 
 def _check_api_password(request, config):
-    """POSTパラメータのapi_passwordを検証する。OKならNone、NGならJsonResponseを返す"""
-    api_password = config.get('api_password', '')
+    """POSTパラメータのapi_passwordを検証する。OKならNone、NGならJsonResponseを返す
+
+    設定値は 'env:NAME' 形式で環境変数を指す（resolve_secret）。未設定なら空文字に
+    解決され、下の分岐で 500 を返す。設定漏れを認証成功にしないための順序。
+    """
+    api_password = resolve_secret(config.get('api_password', ''))
     if not api_password:
         return JsonResponse({'code': 1, 'error': 'api_password is not configured'}, status=500)
     if request.POST.get('api_password') != api_password:

@@ -17,16 +17,12 @@ from django.views.generic import CreateView
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
+from app.common.permissions import is_superuser
 from .lockout import check_locked, register_failure, register_success, should_revoke, user_key
 from .middleware import SESSION_MEETING_KEY, get_client_ip
 from .models import MeetingAccess, hash_meeting_token
 
 logger = logging.getLogger(__name__)
-
-
-def is_superuser(user):
-    """管理者権限チェック"""
-    return user.is_superuser
 
 
 @method_decorator(login_required, name='dispatch')

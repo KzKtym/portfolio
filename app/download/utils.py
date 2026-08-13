@@ -1,15 +1,16 @@
-import json
 import os
 import re
 
 from django.conf import settings
 
+from app.common.config import load_app_config, resolve_secret  # noqa: F401  (再エクスポート)
+
+APP_LABEL = 'download'
+
 
 def load_config():
     """app/download/config.json を読み込む"""
-    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    return load_app_config(APP_LABEL)
 
 
 def get_draft_template_path(upload_type):

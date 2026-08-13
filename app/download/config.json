@@ -1,5 +1,5 @@
 {
-    "api_password": "uyGrhdIQaGwuRAc8",
+    "api_password": "env:DOWNLOAD_API_PASSWORD",
     "upload_limit_minutes": 30,
     "download_expire_days": 10,
     "list_default_days": 60

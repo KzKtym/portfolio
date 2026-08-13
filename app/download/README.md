@@ -27,7 +27,7 @@ API仕様・管理画面仕様・データモデル・アクセス権限モデ�
 
 ```
 app/download/
-├── config.json     # 設定ファイル（API認証パスワード・期限日数等）
+├── config.json     # 設定ファイル（API認証パスワードの参照先・期限日数等）
 ├── models.py       # DownloadToken / DownloadUser
 ├── urls.py
 ├── utils.py
@@ -42,12 +42,22 @@ media/download/        # アップロードファイル格納先（自動生成�
 
 ## セットアップ
 
-1. `app/download/config.json` に `api_password` 等を設定
-2. マイグレーション実行
+1. `.env` に `DOWNLOAD_API_PASSWORD` を設定
+
+   `config.json` の `api_password` は `"env:DOWNLOAD_API_PASSWORD"` という
+   環境変数への参照になっている。`config.json` は git 追跡下にあるため、値を直書きすると
+   リポジトリに秘密が残る。解決は `app/common/config.py` の `resolve_secret`。
+
+   未設定のままだと空文字に解決され、API は 500（`api_password is not configured`）を返す。
+   設定漏れが認証成功にならない順序にしてある。
+
+2. 期限系の設定（`upload_limit_minutes` / `download_expire_days` / `list_default_days`）は
+   `config.json` を直接編集する
+3. マイグレーション実行
    ```bash
    python manage.py migrate download
    ```
-3. `data/download/` 配下に下書きメールテンプレート（`<upload_type>.txt`）を配置
+4. `data/download/` 配下に下書きメールテンプレート（`<upload_type>.txt`）を配置
 
 ## 動作要件
 

@@ -11,7 +11,9 @@ work_shift のテスト。
     * データ整合性（PROTECT / CASCADE / unique_together）
 - 意図的に書かないもの: __str__ / デフォルト値 / CRUDの詳細な戻り値検証
   （仕様変更のたびに壊れるだけで何も守らないため）
-- main.py（FastAPI・別プロセス）/ db.py / schemas.py / seed_work_shift.py は対象外。
+- main.py（FastAPI・別プロセス）と services.py は tests_bff.py が担当する。
+  このファイルは Django 側だけを見る。
+- db.py / schemas.py / seed_work_shift.py は対象外。
 
 前提: Phase 2/3 修正後のコード
   - @csrf_exempt は存在しない（CsrfViewMiddleware の標準保護）

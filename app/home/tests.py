@@ -11,12 +11,10 @@ from accounts.models import (
     hash_meeting_token,
 )
 from django.contrib.auth.models import User
-from django.http import HttpResponse
-from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .decorators import no_cache_no_index
 
 
 def _make_user(username="testuser", password="test-pass-1234", **kwargs):
@@ -40,34 +38,6 @@ class HomeUrlResolveTest(SimpleTestCase):
     def test_reverse_home(self):
         """home:home が /home/ に解決される"""
         self.assertEqual(reverse("home:home"), "/home/")
-
-
-class NoCacheNoIndexDecoratorTest(SimpleTestCase):
-    """no_cache_no_index デコレータのテスト"""
-
-    def setUp(self):
-        self.factory = RequestFactory()
-
-    def test_sets_no_store_and_robots_headers(self):
-        """キャッシュ抑制ヘッダーと X-Robots-Tag が付与される"""
-
-        @no_cache_no_index
-        def view(request):
-            return HttpResponse("ok")
-
-        response = view(self.factory.get("/"))
-
-        self.assertIn("no-store", response["Cache-Control"])
-        self.assertEqual(response["X-Robots-Tag"], "noindex, nofollow")
-
-    def test_preserves_view_name(self):
-        """functools.wraps により元のビュー名が保持される"""
-
-        @no_cache_no_index
-        def my_view(request):
-            return HttpResponse("ok")
-
-        self.assertEqual(my_view.__name__, "my_view")
 
 
 class HomeViewAuthTest(TestCase):
@@ -214,7 +184,7 @@ class HomeViewServicesJsonTest(TestCase):
         payload = [{"name": "ダミー", "status": "on", "url_name": "home:home"}]
         path = _write_temp_json(self.tmpdir, payload)
 
-        with mock.patch("app.home.views.SERVICES_JSON", path):
+        with mock.patch("app.common.config.get_app_config_path", return_value=path):
             response = self.client.get(self.url)
 
         self.assertEqual(response.context["services"], payload)
@@ -227,7 +197,7 @@ class HomeViewServicesJsonTest(TestCase):
         """config.json が存在しない場合 services は空リストになる"""
         missing = Path(self.tmpdir) / "not-exists.json"
 
-        with mock.patch("app.home.views.SERVICES_JSON", missing):
+        with mock.patch("app.common.config.get_app_config_path", return_value=missing):
             response = self.client.get(self.url)
 
         self.assertEqual(response.context["services"], [])
@@ -236,7 +206,7 @@ class HomeViewServicesJsonTest(TestCase):
         """config.json 不在時に ERROR ログが出力される"""
         missing = Path(self.tmpdir) / "not-exists.json"
 
-        with mock.patch("app.home.views.SERVICES_JSON", missing):
+        with mock.patch("app.common.config.get_app_config_path", return_value=missing):
             with self.assertLogs("app.home", level="ERROR") as cm:
                 self.client.get(self.url)
 
@@ -247,7 +217,7 @@ class HomeViewServicesJsonTest(TestCase):
         broken = Path(self.tmpdir) / "broken.json"
         broken.write_text("{ this is not json", encoding="utf-8")
 
-        with mock.patch("app.home.views.SERVICES_JSON", broken):
+        with mock.patch("app.common.config.get_app_config_path", return_value=broken):
             with self.assertLogs("app.home", level="ERROR") as cm:
                 response = self.client.get(self.url)
 

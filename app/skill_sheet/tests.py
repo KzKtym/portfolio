@@ -1076,7 +1076,7 @@ class ResolveSecretTest(SimpleTestCase):
         .env でも同じように通る。os.environ を直接見ると、.env に書いた値は
         pipenv 経由で起動したときしか読めず、起動方法で挙動が変わってしまう。
         """
-        with mock.patch("app.skill_sheet.utils.env_config", return_value="from-dotenv") as m:
+        with mock.patch("app.common.config.env_config", return_value="from-dotenv") as m:
             self.assertEqual(resolve_secret("env:SOME_NAME"), "from-dotenv")
 
         m.assert_called_once_with("SOME_NAME", default="")

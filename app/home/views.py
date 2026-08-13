@@ -23,6 +23,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 from django.utils import timezone
 
+from app.common.config import get_app_config_path, load_app_config
 from accounts.models import (
     LoginHistory,
     LoginLockout,
@@ -31,12 +32,12 @@ from accounts.models import (
     generate_meeting_token,
     hash_meeting_token,
 )
-from accounts.views import is_superuser
-from .decorators import no_cache_no_index
+from app.common.decorators import no_cache_no_index
+from app.common.permissions import is_superuser
 
 logger = logging.getLogger(__name__)
 
-SERVICES_JSON = Path(__file__).parent / 'config.json'
+APP_LABEL = 'home'
 SYSTEM_INFO_MD = Path(settings.MEDIA_ROOT) / 'home' / 'system_information.md'
 
 NO_INFORMATION = '（お知らせ無し）'
@@ -99,10 +100,9 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
         # サービス一覧を JSON から読み込む
         try:
-            with SERVICES_JSON.open(encoding='utf-8') as f:
-                context['services'] = json.load(f)
+            context['services'] = load_app_config(APP_LABEL)
         except FileNotFoundError:
-            logger.error(f'config.json が見つかりません: {SERVICES_JSON}')
+            logger.error(f'config.json が見つかりません: {get_app_config_path(APP_LABEL)}')
             context['services'] = []
         except json.JSONDecodeError as e:
             logger.error(f'config.json の解析に失敗しました: {e}')

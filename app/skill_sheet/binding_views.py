@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from accounts.views import is_superuser
+from app.common.permissions import is_superuser
 
 from .forms import CellBindingForm, field_choices_by_model
 from .models import CellBinding
