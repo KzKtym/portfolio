@@ -21,6 +21,10 @@
 * VPS (Ubuntu 24.04)
   - Nginx
   - SSL/TLS (HTTPS化), DNS（サブドメイン運用）
+* 会議室予約（デモ版）※ソースは別リポジトリ
+  - TypeScript, React + Vite, Fastify
+  - SQLite (better-sqlite3), Drizzle ORM
+  - npm workspaces, コンテナ配布
 
 ## 掲載アプリケーション一覧
 
@@ -30,10 +34,18 @@
 | Download App | 安全なファイル送付環境を提供。トークンのライフサイクル管理、パスワード保護 | [README](./app/download/README.md) |
 | RAG実験管理ツール | RAG開発の模擬実行、実験本体はCLI → 制御や記録をWeb化 | [README](./app/rag_tr_tool/README.md) |
 | Work Shift | 勤務シフトPoC、TypeScript+VueによるGUI、FastAPI+Django構成の使い分け | [README](./app/work_shift/README.md) |
+| 会議室予約（デモ版） | 証券会社向けの案件シミュレーション。情報障壁による表示制御、緊急時の優先予約と強制キャンセル、監査証跡。TypeScript+React、Fastify+SQLite構成 | [別リポジトリ](https://github.com/KzKtym/mrr-demo) |
+
+会議室予約（デモ版）のみ、ソースは別リポジトリ
+（[KzKtym/mrr-demo](https://github.com/KzKtym/mrr-demo)）で公開しており、本リポジトリには
+含まれていません。デモサイトでは同じログインの内側に置き、`/home/` のカードから遷移します。
 
 上記のほか、サイトの入口（未ログイン時のランディング／ログイン後のホーム画面）を
 `app/home` が担当しています。アプリ一覧とお知らせは設定ファイルで差し替えられます
 （[README](./app/home/README.md)）。
+
+認証・ログイン履歴・商談用アクセスは [accounts](./accounts/README.md)、アプリ横断の
+共通部品は [app/common](./app/common/README.md) が担当します。
 　
 
 ## デモサイト
@@ -77,13 +89,18 @@ http://localhost:8000/ を開きます。ログイン後、`/home/` に各アプ
   （[README](./app/work_shift/README.md)）。
 - **Skill Sheet**: データ登録後に検索用の派生列を更新するSQLの実行が必要です
   （[README](./app/skill_sheet/README.md)）。
+- **Download App**: `.env` に `DOWNLOAD_API_PASSWORD` の設定が必要です
+  （[README](./app/download/README.md)）。
 　
 
 ## テスト
 
 ```bash
-pipenv run python manage.py test accounts app.home app.skill_sheet app.download app.work_shift --settings=config.settings_test
+pipenv run python manage.py test accounts app.common app.home app.skill_sheet app.download app.work_shift --settings=config.settings_test
 ```
+
+アプリラベル（`test skill_sheet`）ではなく、ドット付きモジュールパスで指定します。
+`app.common` は Django アプリではないため、この形でしか指定できません。
 
 詳細は [tests/README.md](./tests/README.md) を参照してください。
 　
