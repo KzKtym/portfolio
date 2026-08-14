@@ -2,7 +2,7 @@ import os
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
@@ -98,6 +98,7 @@ def _check_api_password(request, config):
 # トークン発行API
 # ---------------------------------------------------------------------------
 
+@login_not_required
 @csrf_exempt
 @require_http_methods(['POST'])
 def api_issue_token(request):
@@ -149,6 +150,7 @@ def api_issue_token(request):
 # アップロードAPI
 # ---------------------------------------------------------------------------
 
+@login_not_required
 @csrf_exempt
 @require_http_methods(['POST'])
 def api_upload(request):
@@ -230,6 +232,7 @@ def api_upload(request):
 # ダウンロード実行画面
 # ---------------------------------------------------------------------------
 
+@login_not_required
 @csrf_exempt
 @no_cache_no_index
 def download_view(request, token):

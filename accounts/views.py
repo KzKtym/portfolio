@@ -5,7 +5,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_not_required, login_required, user_passes_test
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -139,6 +139,7 @@ def _meeting_unavailable(request):
     return response
 
 
+@login_not_required
 @never_cache
 @require_http_methods(["GET"])
 def meeting_entry(request, token):
@@ -166,6 +167,7 @@ def meeting_entry(request, token):
     return response
 
 
+@login_not_required
 @never_cache
 @require_http_methods(["GET", "POST"])
 def meeting_login(request):

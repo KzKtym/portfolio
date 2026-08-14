@@ -12,6 +12,7 @@ import json
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_not_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -109,6 +110,7 @@ def _rejected(results, message, status_code):
 # セル同期API
 # ---------------------------------------------------------------------------
 
+@login_not_required
 @csrf_exempt
 @require_http_methods(['POST'])
 def api_cells(request):
@@ -208,6 +210,7 @@ def api_cells(request):
 # バインディング一覧API
 # ---------------------------------------------------------------------------
 
+@login_not_required
 @csrf_exempt
 @require_http_methods(['POST'])
 def api_bindings(request):

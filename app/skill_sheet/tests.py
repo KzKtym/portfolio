@@ -5,6 +5,8 @@ from unittest import mock
 
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase, TestCase
+
+from app.common.testing import LoggedInTestCase
 from django.urls import reverse
 
 from .models import BindingConfigError, CellBinding, PersonalInfo, SkillSheetData
@@ -149,7 +151,7 @@ class SkillSheetDataModelTest(TestCase):
 # ビュー: index
 # ═══════════════════════════════════════════════════════════════
 
-class IndexViewTest(TestCase):
+class IndexViewTest(LoggedInTestCase):
     """index のテスト"""
 
     def test_redirects_to_detail_pk_1(self):
@@ -162,20 +164,21 @@ class IndexViewTest(TestCase):
             fetch_redirect_response=False,
         )
 
-    # NOTE: skill_sheet の各ビューは認証デコレータが無く、未ログインでもアクセス可能。
-    #       現状の挙動を正としてテストしている。
-    def test_anonymous_can_access(self):
-        """未ログインでもアクセスできる（現状仕様）"""
+    def test_anonymous_redirects_to_login(self):
+        """未ログインならログイン画面へ誘導される（LoginRequiredMiddleware）"""
+        self.client.logout()
+
         response = self.client.get(reverse("skill_sheet:index"))
 
         self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.headers["Location"])
 
 
 # ═══════════════════════════════════════════════════════════════
 # ビュー: detail
 # ═══════════════════════════════════════════════════════════════
 
-class DetailViewTest(TestCase):
+class DetailViewTest(LoggedInTestCase):
     """detail のテスト"""
 
     def setUp(self):
@@ -186,11 +189,14 @@ class DetailViewTest(TestCase):
     # 正常系
     # ──────────────────────────────────────────────
 
-    def test_anonymous_can_access(self):
-        """未ログインでもアクセスできる（現状仕様）"""
+    def test_anonymous_redirects_to_login(self):
+        """未ログインならログイン画面へ誘導される（LoginRequiredMiddleware）"""
+        self.client.logout()
+
         response = self.client.get(self.url)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.headers["Location"])
 
     def test_uses_template(self):
         """skill_sheet/main.html が使われる"""
@@ -370,7 +376,7 @@ class DetailViewTest(TestCase):
             self.assertEqual(sheet[key], "-", msg=key)
 
 
-class DetailSearchTest(TestCase):
+class DetailSearchTest(LoggedInTestCase):
     """detail の検索機能のテスト"""
 
     def setUp(self):
@@ -516,7 +522,7 @@ class DetailSearchTest(TestCase):
         self.assertTrue(all(not s["highlighted"] for s in response.context["skill_sheets"]))
 
 
-class DetailConfigJsonTest(TestCase):
+class DetailConfigJsonTest(LoggedInTestCase):
     """detail の config.json 読み込みのテスト"""
 
     def setUp(self):

@@ -54,6 +54,12 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # 既定でログイン必須にする（Django 5.1 標準）。公開してよいビューだけが
+    # @login_not_required を付けて明示的に開ける。
+    #   アプリごとに login_required を付けて回る方式は付け漏れが起きる。実際に
+    #   rag_tr_tool と skill_sheet が未認証で全公開されていた。
+    #   既定を反転させ、新しいアプリを足しても自動的に保護される状態にする。
+    'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

@@ -10,6 +10,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
+
+from app.common.testing import LoggedInTestCase
 from django.urls import reverse
 
 from app.rag_tr_tool.models import Experiment, RagProject
@@ -33,7 +35,7 @@ def make_experiment(project, **kwargs):
     return Experiment.objects.create(**{**defaults, **kwargs})
 
 
-class ProjectViewTest(TestCase):
+class ProjectViewTest(LoggedInTestCase):
     def test_project_list_renders(self):
         make_project(name="表示用PJ")
         res = self.client.get(reverse("project_list"))
@@ -80,7 +82,7 @@ class ProjectViewTest(TestCase):
         self.assertEqual(self.client.post(reverse("project_delete", args=[999])).status_code, 404)
 
 
-class RunExperimentViewTest(TestCase):
+class RunExperimentViewTest(LoggedInTestCase):
     def setUp(self):
         self.project = make_project()
 
@@ -170,7 +172,7 @@ class RunExperimentServiceTest(TestCase):
         self.assertEqual(out["message"], "実行完了（保存OK）")
 
 
-class ExperimentListViewTest(TestCase):
+class ExperimentListViewTest(LoggedInTestCase):
     def setUp(self):
         self.project = make_project()
 
@@ -205,7 +207,7 @@ class ExperimentListViewTest(TestCase):
         self.assertEqual(listed[exps[0].id], "")
 
 
-class DeleteAndToggleTest(TestCase):
+class DeleteAndToggleTest(LoggedInTestCase):
     def setUp(self):
         self.project = make_project()
         self.exp = make_experiment(self.project)
@@ -241,7 +243,7 @@ class DeleteAndToggleTest(TestCase):
         self.assertFalse(Experiment.objects.exists())
 
 
-class CompareViewTest(TestCase):
+class CompareViewTest(LoggedInTestCase):
     def setUp(self):
         self.project = make_project()
         self.a = make_experiment(self.project, mrr=0.4, spec_snapshot="* A\n* 共通")
@@ -295,7 +297,7 @@ class CompareViewTest(TestCase):
         self.assertEqual(data["rwa_disabled_reasons"], [])
 
 
-class RwaViewTest(TestCase):
+class RwaViewTest(LoggedInTestCase):
     def setUp(self):
         self.project = make_project()
         self.plain = make_experiment(self.project, parameters={"top_k": 5})
@@ -333,7 +335,7 @@ class RwaViewTest(TestCase):
         self.assertFalse(res.json()["has_rwa_a"])
 
 
-class GenerateAnswersViewTest(TestCase):
+class GenerateAnswersViewTest(LoggedInTestCase):
     def setUp(self):
         self.project = make_project()
         self.exp = make_experiment(self.project)
@@ -416,7 +418,7 @@ class GenerateAnswersServiceTest(TestCase):
         self.assertEqual(out["status"], 404)
 
 
-class ContextProcessorTest(TestCase):
+class ContextProcessorTest(LoggedInTestCase):
     def test_returns_project_for_url_with_project_id(self):
         project = make_project(name="対象PJ", description="あ" * 100)
         with patch.object(context_service, "read_log", return_value=None), \
@@ -443,7 +445,7 @@ class ContextProcessorTest(TestCase):
         self.assertIsNone(res.context["current_project"])
 
 
-class LogApiTest(TestCase):
+class LogApiTest(LoggedInTestCase):
     def setUp(self):
         self.project = make_project()
         self.exp = make_experiment(self.project)
@@ -488,7 +490,7 @@ class LogApiTest(TestCase):
         self.assertIn("attachment", res["Content-Disposition"])
 
 
-class CheckIndexTest(TestCase):
+class CheckIndexTest(LoggedInTestCase):
     def test_post_returns_index_info(self):
         with patch.object(data_service, "get_index_info", return_value={"exists": True}), \
              patch.object(data_service, "resolve_spec", return_value="* Spec"):
@@ -504,7 +506,7 @@ class CheckIndexTest(TestCase):
         self.assertFalse(res.json()["exists"])
 
 
-class ResultViewTest(TestCase):
+class ResultViewTest(LoggedInTestCase):
     def setUp(self):
         self.project = make_project()
         self.exp = make_experiment(self.project)

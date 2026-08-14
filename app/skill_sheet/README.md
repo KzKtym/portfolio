@@ -84,7 +84,7 @@ static/                # common.css / common.js（ページトップボタン）
 | `/skill_sheet/<id>/` | 指定IDのスキルシートを表示 |
 | `/skill_sheet/<id>/?search=<keywords>` | キーワード検索付きで表示 |
 
-存在しないIDは Django 標準の404（`get_object_or_404`）。**ログイン不要**で閲覧できる。
+存在しないIDは Django 標準の404（`get_object_or_404`）。**ログインが必要**。
 
 ## セットアップ
 
@@ -161,4 +161,5 @@ pipenv run python manage.py test app.skill_sheet --settings=config.settings_test
   フォールバック実装待ちで `@unittest.skip` にしてある。
 - `/skill_sheet/` は**ID=1に固定**でリダイレクトする。デモ用の割り切りで、一覧画面は持たない。
 - `scope` / `work_style` は登録時に自動更新されない。データ登録・更新のたびに上記SQLの実行が必要。
-- 認証を掛けていないため、公開範囲に注意すること（個人情報を含むデータを扱う想定のアプリ）。
+- 画面はログイン必須です（プロジェクト全体の既定。`LoginRequiredMiddleware`）。
+  セル同期APIのみ `api_password` 認証で、セッション認証の対象外です。
