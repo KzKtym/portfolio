@@ -4,6 +4,5 @@
     "core/",
     "core/rewrite/rewrite_prompt.txt"
   ],
-  "evaluation_script": "core/evaluation.py",
-  "openai_api_key": "xxxxxxxxxxxxxxxxxxxxx"
+  "evaluation_script": "core/evaluation.py"
 }

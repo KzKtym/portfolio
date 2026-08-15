@@ -202,10 +202,11 @@ data/rag_tr_tool/raw/fastapi/docs/**/*.md
 
 Query Rewrite / Multi Query / LLM回答生成を使う場合のみ必要です。
 
-<!-- TODO: 環境変数方式へ移行予定 -->
+プロジェクト直下の `.env` に設定します。未設定でも、これらの機能を使わなければ動作します。
 
-> **⚠ 現在の実装は `app/rag_tr_tool/config.json` にAPIキーを平文で記載します。**
-> **デモで動作確認をする場合は取り扱いに十分ご注意ください。**
+```
+OPENAI_API_KEY=sk-...
+```
 
 ### 5. 起動
 
@@ -269,7 +270,7 @@ app/rag_tr_tool/
 ├── core/         RAGパイプライン本体（ingest / chunking / embedding /
 │                 vectorstore / indexing / retrieval / rewrite / llm / evaluation）
 ├── utils/        SPEC抽出・ログ整形・データ入出力
-└── config.json   設定（※APIキーを含む。コミット禁止）
+└── config.json   設定（APIキーは含まない。`.env` の OPENAI_API_KEY を使う）
 
 data/rag_tr_tool/
 ├── raw/fastapi/docs/     評価対象コーパス（現在は全プロジェクト共通・パス固定）
@@ -290,7 +291,7 @@ docs/rag_tr_tool/
 
 **詳細仕様は別紙を参照してください。**
 
-📄 [`docs/rag_tr_tool/rag_tr_tool_spec.md`](docs/rag_tr_tool/rag_tr_tool_spec.md)
+📄 [`docs/rag_tr_tool/rag_tr_tool_spec.md`](../../docs/rag_tr_tool/rag_tr_tool_spec.md)
 
 RAGの用語集・全パラメータのリファレンス・処理パイプラインの詳細・インデックスキャッシュの仕組み・SPEC抽出機構・既知の制約を記載しています。RAGの予備知識がなくても読めるように書かれています。
 
@@ -301,7 +302,7 @@ RAGの用語集・全パラメータのリファレンス・処理パイプラ�
 | 項目 | 内容 |
 |---|---|
 | **認証** | プロジェクト全体で既定がログイン必須です（`LoginRequiredMiddleware`）。かつては全URLが未認証で到達可能でしたが、公開サイトに置いたまま放置していたため是正しました |
-| **APIキー** | `config.json` に平文で記載する実装です（[セットアップ4](#4-openai-apiキーの設定任意)参照） |
+| **APIキー** | OpenAI のキーは `.env` の `OPENAI_API_KEY` から読みます（[セットアップ4](#4-openai-apiキーの設定任意)参照） |
 | **CPU推論** | インデックス構築とRe-rankerに時間がかかります |
 | **コーパス** | Markdown を前提とします（PDF・HTML等は非対応）。開発用に FastAPI 公式ドキュメントを使用。プロジェクト毎の任意コーパス対応は修正中 |
 | **開発状況** | 既知の不具合・制約があります。仕様書の「既知の制約」および「付録A」を参照してください |

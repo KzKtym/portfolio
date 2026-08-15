@@ -238,21 +238,12 @@ input.txt
 dialogue_log/
 *.patch
 
-# doc_struct
-doc_structs/_old/
-doc_structs/core/
-doc_structs/management/*
-doc_structs/_memo.py
-doc_structs/tests.py
-
-# my_office
+# 作業用ファイル
 _sample
-app/ai_log/readme.md
 app/*/_*.md
 
 # rag_tr_tool
 data/rag_tr_tool/*
-app/rag_tr_tool/config.json
 bak_*.sh
 
 # deploy
